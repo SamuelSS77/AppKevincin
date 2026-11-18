@@ -1,0 +1,922 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#171717">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+<title>Mira antes de disparar</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap">
+<style>
+/* Layout: una pantalla de celular tratada como visor de cámara. Negro de fondo, naranja solo para lo que se acciona o avanza, beige para leer. Navegación inferior fija. */
+:root{
+  --k:#171717;            /* negro: fondos, navegación */
+  --o:#EA5536;            /* naranja: botones, indicadores, retos, avances */
+  --b:#D7D3C2;            /* beige: texto, superficies de lectura */
+  /* derivados de los tres colores (solo transparencias) */
+  --b70:rgba(215,211,194,.7); --b50:rgba(215,211,194,.5); --b25:rgba(215,211,194,.25);
+  --b12:rgba(215,211,194,.12); --b06:rgba(215,211,194,.06);
+  --o20:rgba(234,85,54,.2);
+  --f-d:"Druk Condensed","Druk Cond","Druk","Arial Narrow",Arial,sans-serif;
+  --f-t:"Space Grotesk",Arial,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--k);color:var(--b);font-family:var(--f-t);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+button,input,textarea{font:inherit;color:inherit}
+.wrap{height:100%;display:grid;place-items:center;padding:16px}
+.app{position:relative;width:100%;max-width:410px;height:min(860px,100%);min-height:600px;background:var(--k);border:1px solid var(--b12);border-radius:28px;overflow:hidden}
+@media (max-width:500px){.wrap{padding:0;display:block}.app{max-width:none;height:100%;min-height:0;border:0;border-radius:0}}
+
+.scr{position:absolute;inset:0;display:flex;flex-direction:column;gap:20px;padding-block:16px 24px;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));overflow-y:auto;overflow-x:hidden;animation:in .3s ease both}
+.scr.tab{bottom:68px}
+@keyframes in{from{opacity:.001;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Tipografía */
+h1,h2,h3,.d{font-family:var(--f-d);font-weight:900;font-stretch:condensed;text-transform:uppercase;line-height:.9;letter-spacing:-.005em;margin:0;text-wrap:balance}
+h1{font-size:clamp(50px,15vw,64px)}
+h2{font-size:clamp(28px,8vw,40px)}
+h1,h2,h3{overflow-wrap:break-word}
+h3{font-size:24px}
+p{margin:0}
+.lead{font-size:15px;font-weight:400;color:var(--b);max-width:34em}
+.mute{color:var(--b70)}
+.small{font-size:12px;color:var(--b70)}
+.lab{font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--b70)}
+.eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--o);display:flex;align-items:center;gap:8px}
+.eyebrow::before{content:"";width:6px;height:6px;background:var(--o);border-radius:50%}
+.hud{display:flex;justify-content:space-between;gap:8px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--b50);font-variant-numeric:tabular-nums}
+.o{color:var(--o)}
+
+/* Barra superior del flujo */
+.top{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.ib{width:40px;height:40px;border-radius:50%;border:1px solid var(--b25);background:transparent;display:grid;place-items:center;cursor:pointer;flex-shrink:0;font-size:16px}
+.ib:hover{border-color:var(--o);color:var(--o)}
+.ticks{flex:1;display:flex;gap:3px;min-width:0}
+.ticks i{flex:1;height:3px;background:var(--b12);border-radius:2px}
+.ticks i.on{background:var(--o)}
+.ticks i.now{background:var(--o);box-shadow:0 0 0 2px var(--o20)}
+
+/* Visor */
+.vf{position:relative;padding:16px}
+.c{position:absolute;width:16px;height:16px;border:2px solid var(--o)}
+.c.tl{top:0;left:0;border-right:0;border-bottom:0}.c.tr{top:0;right:0;border-left:0;border-bottom:0}
+.c.bl{bottom:0;left:0;border-right:0;border-top:0}.c.br{bottom:0;right:0;border-left:0;border-top:0}
+
+/* Botones */
+.cta{margin-top:auto;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;width:100%;min-height:58px;padding:0 22px;border:0;border-radius:4px;background:var(--o);color:var(--k);font-family:var(--f-t);font-weight:700;font-size:14px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:transform .15s}
+.cta:active{transform:scale(.98)}
+.cta[disabled]{background:var(--b12);color:var(--b50);cursor:not-allowed}
+.cta .arr{font-size:20px}
+.ghost{min-height:58px;padding:0 16px;border:1px solid var(--b25);border-radius:4px;background:transparent;font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+.ghost:hover{border-color:var(--o);color:var(--o)}
+.row{display:flex;gap:10px}
+.row>*{flex:1;min-width:0}
+.linkbtn{background:none;border:0;color:var(--b70);font-size:12px;text-decoration:underline;text-underline-offset:4px;cursor:pointer;padding:8px;align-self:center}
+.linkbtn:hover{color:var(--o)}
+:focus-visible{outline:2px solid var(--o);outline-offset:3px}
+
+/* Figuras / referentes */
+.fig{margin:0;display:flex;flex-direction:column;gap:8px}
+.fig .vf{padding:10px;background:var(--b06)}
+.fig svg,.fig img{display:block;width:100%;height:auto;border-radius:2px}
+.fig figcaption{font-size:13px;color:var(--b)}
+.fig figcaption b{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.16em;color:var(--o);margin-bottom:2px}
+.fig figcaption b span{color:var(--b50);font-weight:400}
+
+/* Bienvenida */
+.welcome h1{font-size:clamp(44px,14.5vw,64px)}
+.welcome .vf{padding:30px 20px;display:flex;flex-direction:column;gap:18px}
+.welcome .quote{font-size:20px;line-height:1.25;font-weight:500}
+.flow7{display:flex;flex-wrap:wrap;gap:4px 8px;font-size:10px;letter-spacing:.14em;color:var(--b50);text-transform:uppercase}
+.flow7 span:not(:last-child)::after{content:" →";color:var(--o)}
+
+/* Niveles */
+.lvcard{border:1px solid var(--b12);border-radius:4px;overflow:hidden;display:flex;flex-direction:column}
+.lvcard.sel{border-color:var(--o)}
+.lvcard .img{position:relative;aspect-ratio:3/2;max-width:100%}
+.lvcard .img svg{display:block;width:100%;height:100%}
+.lvcard .img .num{position:absolute;left:14px;bottom:10px;font-family:var(--f-d);font-weight:900;font-size:64px;line-height:.8;color:var(--b)}
+.lvcard .body{padding:16px;display:flex;flex-direction:column;gap:12px}
+.lvcard .cta{margin-top:4px;min-height:50px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;padding:5px 10px;border-radius:99px;border:1px solid var(--b25);font-size:11px;letter-spacing:.04em}
+.chip.o{border-color:var(--o);color:var(--o)}
+.allbtn{display:flex;justify-content:space-between;align-items:center;width:100%;padding:18px 16px;border:1px dashed var(--b50);border-radius:4px;background:transparent;cursor:pointer;text-align:left}
+.allbtn:hover{border-color:var(--o)}
+.allbtn .d{font-size:26px}
+
+/* Aprender (inicio del aprendizaje) */
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--b06);padding:4px;border-radius:6px}
+.seg button{border:0;background:transparent;padding:10px 2px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.1em;cursor:pointer;color:var(--b70)}
+.seg button[aria-pressed="true"]{background:var(--b);color:var(--k)}
+.pct{display:flex;align-items:flex-end;gap:14px}
+.pct .d{font-size:72px;color:var(--o);font-variant-numeric:tabular-nums}
+.pct .d small{font-size:32px}
+.bar{height:4px;background:var(--b12);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--o)}
+.last{background:var(--b06);border-radius:4px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.mods{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.mod{width:100%;display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;padding:14px 0;background:none;border:0;border-bottom:1px solid var(--b12);cursor:pointer;text-align:left}
+.mod:hover .t{color:var(--o)}
+.mod .n{font-family:var(--f-d);font-weight:900;font-size:24px;color:var(--b50);font-variant-numeric:tabular-nums}
+.mod .t{font-weight:700;font-size:14px;display:block}
+.mod .s{font-size:11px;color:var(--b50);display:block}
+.mod .st{font-size:10px;letter-spacing:.12em;font-weight:700;color:var(--b50)}
+.mod.done .n,.mod.done .st{color:var(--o)}
+.grouph{display:flex;justify-content:space-between;align-items:baseline;margin-top:8px}
+
+/* Lección */
+.concepts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.concepts div{background:var(--b06);border-radius:4px;padding:12px;font-size:13px;font-weight:500;min-width:0}
+.concepts div b{display:block;font-size:10px;color:var(--o);letter-spacing:.14em;margin-bottom:4px}
+.look{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.look li{display:grid;grid-template-columns:20px 1fr;gap:8px;font-size:14px}
+.look li::before{content:"+";color:var(--o);font-weight:700}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pair .fig figcaption{font-size:12px}
+
+/* Reto */
+.retocard{background:var(--b);color:var(--k);border-radius:4px;padding:22px 20px;display:flex;flex-direction:column;gap:14px}
+.retocard .eyebrow{color:var(--o)}
+.retocard h2{font-size:clamp(28px,8vw,44px)}
+.retocard .obj{font-size:15px;font-weight:500}
+.steps{margin:0;padding:0;list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:10px}
+.steps li{counter-increment:s;display:grid;grid-template-columns:28px 1fr;gap:8px;font-size:14px}
+.steps li::before{content:counter(s,decimal-leading-zero);font-family:var(--f-d);font-weight:900;font-size:20px;color:var(--o);line-height:1}
+.tips{border-left:2px solid var(--o);padding-left:14px;display:flex;flex-direction:column;gap:6px;font-size:13px}
+
+/* Explorar */
+.viewer{position:relative;flex:1;min-height:270px;border-radius:2px;background:var(--b06);overflow:hidden;display:grid;place-items:center}
+.viewer .c{margin:12px}
+.grid3{position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent calc(33.33% - .5px),var(--b25) calc(33.33% - .5px) calc(33.33% + .5px),transparent 0,transparent calc(66.66% - .5px),var(--b25) calc(66.66% - .5px) calc(66.66% + .5px),transparent 0),linear-gradient(0deg,transparent calc(33.33% - .5px),var(--b25) calc(33.33% - .5px) calc(33.33% + .5px),transparent 0,transparent calc(66.66% - .5px),var(--b25) calc(66.66% - .5px) calc(66.66% + .5px),transparent 0)}
+.viewer .grid3{inset:16px;opacity:.5}
+.fpt{position:absolute;width:42px;height:42px;border:1.5px solid var(--o);transition:left 1.8s cubic-bezier(.6,0,.2,1),top 1.8s cubic-bezier(.6,0,.2,1)}
+.fpt::after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px;background:var(--o);border-radius:50%}
+.counter{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.ring{width:150px;height:150px}
+.ring circle{fill:none;stroke-width:3}
+.ring .bg{stroke:var(--b12)}
+.ring .fg{stroke:var(--o);stroke-linecap:round;transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset 1s linear}
+.bignum{position:absolute;top:0;left:0;right:0;height:150px;display:grid;place-items:center;font-family:var(--f-d);font-weight:900;font-size:56px;font-variant-numeric:tabular-nums}
+.rec{display:inline-flex;align-items:center;gap:6px}
+.rec::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--o);animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.2}}
+.hint{min-height:44px;font-size:18px;font-weight:500;text-align:center}
+.field{width:100%;background:var(--b06);border:1px solid var(--b12);border-radius:4px;padding:12px 14px;font-size:14px;resize:none}
+.field::placeholder{color:var(--b50)}
+.field:focus{outline:none;border-color:var(--o)}
+.three{display:flex;flex-direction:column;gap:8px}
+.three label{display:grid;grid-template-columns:24px 1fr;align-items:center;gap:8px;font-family:var(--f-d);font-weight:900;font-size:20px;color:var(--o)}
+
+/* Experimentar */
+.checks{display:flex;flex-direction:column;gap:8px}
+.check{display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:center;padding:16px;border:1px solid var(--b12);border-radius:4px;cursor:pointer;font-size:14px}
+.check input{appearance:none;width:24px;height:24px;border:2px solid var(--b50);border-radius:3px;margin:0;display:grid;place-items:center;cursor:pointer}
+.check input:checked{background:var(--o);border-color:var(--o)}
+.check input:checked::after{content:"✓";color:var(--k);font-weight:700;font-size:14px}
+.check:has(input:checked){border-color:var(--o)}
+
+/* Foto */
+.shot{position:relative;aspect-ratio:4/3;max-width:100%;background:var(--b06);border-radius:2px;overflow:hidden;display:grid;place-items:center}
+.shot img{width:100%;height:100%;object-fit:cover;display:block}
+.shot .c{margin:10px;z-index:2}
+.shot .grid3{z-index:1}
+.shot.nogrid .grid3{display:none}
+.empty{text-align:center;color:var(--b50);font-size:11px;letter-spacing:.14em;display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px}
+.cross{width:40px;height:40px;position:relative}
+.cross::before,.cross::after{content:"";position:absolute;background:var(--o)}
+.cross::before{left:50%;top:0;bottom:0;width:1.5px;margin-left:-.75px}
+.cross::after{top:50%;left:0;right:0;height:1.5px;margin-top:-.75px}
+.spin{width:34px;height:34px;border:2px solid var(--b25);border-top-color:var(--o);border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.slots{display:grid;grid-template-columns:repeat(var(--n),1fr);gap:6px}
+.slot{aspect-ratio:1;max-width:100%;border:1px solid var(--b25);border-radius:2px;background:var(--b06);padding:0;cursor:pointer;overflow:hidden;position:relative;display:grid;place-items:center;font-size:9px;letter-spacing:.08em;color:var(--b50)}
+.slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.slot.act{border:2px solid var(--o)}
+.slotlab{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.14em;color:var(--b70);text-transform:uppercase}
+.filebtn{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:72px;padding:12px;border:1px solid var(--b25);border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;letter-spacing:.12em;text-align:center}
+.filebtn.main{background:var(--o);color:var(--k);border-color:var(--o)}
+.filebtn:hover{border-color:var(--o)}
+.filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.err{border:1px solid var(--o);color:var(--b);border-radius:4px;padding:12px 14px;font-size:13px}
+.err b{color:var(--o)}
+.toggle{display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:.14em;color:var(--b70);cursor:pointer;align-self:flex-start;background:none;border:0;padding:4px 0}
+.toggle .sw{width:28px;height:16px;border-radius:8px;background:var(--b25);position:relative;transition:background .2s}
+.toggle .sw::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:var(--b);transition:left .2s}
+.toggle[aria-pressed="true"] .sw{background:var(--o)}
+.toggle[aria-pressed="true"] .sw::after{left:14px}
+
+/* Reflexión */
+.q{display:flex;flex-direction:column;gap:8px}
+.q label{font-size:14px;font-weight:700}
+.q label span{color:var(--o);font-family:var(--f-d);font-size:18px;margin-right:8px}
+.thumbs{display:flex;gap:6px;overflow-x:auto}
+.thumb{width:72px;aspect-ratio:1;border-radius:2px;object-fit:cover;flex-shrink:0;border:1px solid var(--b25)}
+
+/* Retroalimentación */
+.fb{display:flex;flex-direction:column;gap:18px}
+.fb section{display:flex;flex-direction:column;gap:6px}
+.fb .lab{color:var(--o)}
+.fb p{font-size:14px}
+.fb .you{background:var(--b06);border-radius:4px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.fb .you q{font-weight:500;quotes:"“" "”"}
+.fb ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.fb ul li{display:grid;grid-template-columns:20px 1fr;gap:6px;font-size:14px}
+.fb ul li::before{content:"→";color:var(--o)}
+.fb .ask{background:var(--b);color:var(--k);border-radius:4px;padding:18px}
+.fb .ask .lab{color:var(--o)}
+.fb .ask p{font-family:var(--f-d);font-weight:900;font-stretch:condensed;text-transform:uppercase;font-size:28px;line-height:.95;margin-top:6px}
+.data{display:flex;flex-direction:column;gap:6px}
+.drow{display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center;font-size:10px;letter-spacing:.1em;color:var(--b70);font-variant-numeric:tabular-nums;text-transform:uppercase}
+.drow img{width:44px;height:44px;object-fit:cover;border-radius:2px}
+
+/* Progreso */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.stat{background:var(--b06);border-radius:4px;padding:14px;display:flex;flex-direction:column;gap:2px}
+.stat .d{font-size:44px;color:var(--b);font-variant-numeric:tabular-nums}
+.stat .d small{font-size:20px;color:var(--b50)}
+.stat.wide{grid-column:1/-1;flex-direction:row;justify-content:space-between;align-items:flex-end}
+.lvrow{display:grid;grid-template-columns:76px 1fr 34px;gap:10px;align-items:center;font-size:11px;letter-spacing:.1em;font-weight:700;font-variant-numeric:tabular-nums}
+.acts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.act{width:100%;display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;padding:8px;background:var(--b06);border:1px solid transparent;border-radius:4px;cursor:pointer;text-align:left}
+.act:hover{border-color:var(--o)}
+.act img,.act .ph{width:56px;height:56px;object-fit:cover;border-radius:2px;background:var(--b12)}
+.act .t{font-weight:700;font-size:13px;display:block}
+.act .s{font-size:11px;color:var(--b50);display:block}
+.act .go{color:var(--o);font-size:18px;padding-right:6px}
+.emptybox{border:1px dashed var(--b25);border-radius:4px;padding:28px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.qa{display:flex;flex-direction:column;gap:4px;padding:12px 0;border-bottom:1px solid var(--b12)}
+.qa b{font-size:12px;color:var(--o)}
+.photos{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.photos img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:2px;display:block}
+.photos img:only-child{grid-column:1/-1;aspect-ratio:4/3}
+
+/* Perfil */
+.opts{display:flex;flex-direction:column;gap:6px}
+.opt{display:flex;justify-content:space-between;align-items:center;width:100%;padding:16px;border:1px solid var(--b12);border-radius:4px;background:transparent;cursor:pointer;text-align:left}
+.opt[aria-pressed="true"]{border-color:var(--o)}
+.opt[aria-pressed="true"] .dot{background:var(--o);border-color:var(--o)}
+.opt .dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--b50);flex-shrink:0}
+.opt .t{font-weight:700;display:block}
+.opt .s{font-size:12px;color:var(--b50);display:block}
+.confirm{border:1px solid var(--o);border-radius:4px;padding:16px;display:flex;flex-direction:column;gap:12px}
+
+/* Navegación inferior */
+.nav{position:absolute;left:0;right:0;bottom:0;height:68px;display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--b12);background:var(--k);z-index:20;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.nav button{background:none;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:9px;letter-spacing:.14em;font-weight:700;color:var(--b50);cursor:pointer}
+.nav svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.6}
+.nav button[aria-current="page"]{color:var(--o)}
+
+.toast{position:absolute;left:20px;right:20px;bottom:84px;z-index:30;background:var(--b);color:var(--k);border-radius:4px;padding:14px 16px;font-weight:700;font-size:13px;animation:in .3s ease both}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap"><main lang="es" class="app" id="app" aria-live="polite"></main></div>
+
+<script>
+/* ================= CONTENIDO ================= */
+const LV={
+basico:{n:'01',name:'BÁSICO',title:'Aprender a mirar',ill:'attention',
+ desc:'Para comenzar desde cero y desarrollar la observación.',
+ learn:'A detenerte, observar tu entorno y reconocer qué puede convertirse en una fotografía.',
+ skills:['Atención','Líneas','Color','Luz','Intención'],
+ mods:[
+ {id:'b1',t:'Atención visual',ill:'attention',
+  sum:'Mirar es pasar los ojos por encima. Observar es detenerse hasta que algo aparece. Casi toda fotografía empieza ahí.',
+  concepts:['Detenerse antes de sacar el celular','Detalles cotidianos','Lo que pasa desapercibido','Mirar no es observar'],
+  obs:{a:'Al mirar: ves una pared con puntos. Todo pesa igual.',b:'Al observar: aparece la única forma distinta. Siempre estuvo ahí.',look:['Lo que se repite','Lo único que rompe la repetición','Detalles pequeños: texturas, marcas, desgaste']},
+  reto:{name:'30 segundos',obj:'Entrenar la atención antes de disparar.',steps:['Quédate quieto en un espacio cotidiano.','Observa durante 30 segundos sin tomar fotos.','Anota 3 elementos que normalmente ignorarías.','Fotografía uno de ellos.'],tips:['Mira el suelo, tu altura y arriba.','Busca lo pequeño, lo gastado, lo que lleva años ahí.']},
+  timer:30,hints:['Mira el suelo.','Ahora mira arriba.','¿Qué textura tiene lo que tienes cerca?','Algo pequeño. Más pequeño.','¿Qué lleva años ahí sin que nadie lo note?'],
+  exp:['Fotografía tu elemento desde muy cerca.','Cambia de altura: agáchate o súbete a algo.','Prueba con y sin lo que lo rodea.'],
+  fb:{sum:'Observar es detenerse hasta que aparecen cosas que antes no veías.',purpose:'Que frenaras antes de fotografiar y notaras lo cotidiano.',recs:['Repite el ejercicio en otro lugar: el bus, la cocina, una escalera.','Antes de disparar, pregúntate si alguien más se habría detenido ahí.','Si el detalle es pequeño, acércate hasta que no compita con nada.'],q:'¿Qué otro lugar de tu día recorres sin mirar?'}},
+ {id:'b2',t:'Líneas y formas',ill:'lines',
+  sum:'Las líneas son caminos para los ojos. Las horizontales calman, las verticales elevan y las diagonales mueven. Formas y patrones ordenan lo que vemos.',
+  concepts:['Horizontales, verticales y diagonales','Figuras geométricas','Patrones y repeticiones','Líneas que dirigen la mirada'],
+  obs:{a:'Líneas paralelas sin destino: la mirada no sabe a dónde ir.',b:'Todas las líneas apuntan a un punto. La mirada llega sola.',look:['Bordes, cables, andenes, barandas','El punto hacia donde convergen','Formas que se repiten']},
+  reto:{name:'Sigue la línea',obj:'Encontrar una línea que dirija la mirada hacia un punto específico.',steps:['Busca una línea en tu entorno: un borde, un cable, una fila.','Síguela con los ojos hasta donde termina.','Encuadra para que la línea lleve a ese punto.'],tips:['Agáchate: las líneas del suelo se vuelven más fuertes.','Las diagonales dan más movimiento que las horizontales.']},
+  exp:['Pon la línea horizontal, vertical y diagonal en el cuadro.','Haz que entre por una esquina.','Busca un patrón que se repita y algo que lo rompa.'],
+  fb:{sum:'Las líneas guían la mirada y su dirección cambia la sensación de la imagen.',purpose:'Que usaras una línea como camino hacia algo.',recs:['Prueba la misma línea desde ángulos distintos y compara a dónde lleva.','Coloca el punto donde terminan las líneas fuera del centro.','Busca líneas menos obvias: sombras, filas de objetos, miradas.'],q:'¿Tu línea lleva a algún lugar o solo atraviesa el cuadro?'}},
+ {id:'b3',t:'Color y contraste',ill:'color',
+  sum:'Un color fuerte o un choque de claro y oscuro se roba la mirada antes que cualquier otra cosa.',
+  concepts:['Colores dominantes','Contraste claro / oscuro','Repeticiones de color','Lo que destaca'],
+  obs:{a:'Todo en el mismo tono: nada sobresale.',b:'Un solo color distinto. Ya sabes dónde miraste.',look:['El color que más se repite','El que no encaja','Claro contra oscuro']},
+  reto:{name:'El que no encaja',obj:'Encontrar un objeto que destaque por su color frente al entorno.',steps:['Identifica el color dominante del lugar.','Busca algo que rompa ese color.','Encuadra dejando ver el entorno.'],tips:['Fondos neutros (cemento, pared, cielo nublado) hacen resaltar el color.','Si el color se repite mucho, pierde fuerza.']},
+  exp:['Acércate hasta que el color ocupe medio cuadro.','Aléjate hasta que sea un punto pequeño.','Busca el mismo color en otro lugar y compara.'],
+  fb:{sum:'El color y el contraste deciden qué se mira primero.',purpose:'Que reconocieras cómo algo destaca por diferencia con su entorno.',recs:['Compara tu foto cerca y lejos: ¿cuándo destaca más el color?','Busca también contraste de luz: algo claro sobre fondo oscuro.','Saca del cuadro otros colores fuertes que compitan.'],q:'¿El color destaca por sí mismo o por lo que lo rodea?'}},
+ {id:'b4',t:'Luz y sombra',ill:'light',
+  sum:'La luz dibuja las formas y la sombra también. Su dirección y su dureza cambian por completo una escena.',
+  concepts:['Dirección de la luz','Sombras','Reflejos','Luz directa y luz difusa'],
+  obs:{a:'Luz pareja: todo se ve, nada se recorta.',b:'Luz lateral: la sombra se estira y la forma aparece.',look:['De dónde viene la luz','Hacia dónde cae la sombra','Superficies que reflejan']},
+  reto:{name:'Sombra o reflejo',obj:'Fotografiar una sombra o un reflejo que genere una composición interesante.',steps:['Ubica de dónde viene la luz.','Busca la sombra de algo, o un reflejo en vidrio, agua o una pantalla.','Encuadra la sombra o el reflejo como protagonista.'],tips:['Temprano o al final de la tarde las sombras son más largas.','Luz directa da sombras duras; un día nublado da luz difusa y suave.']},
+  exp:['Muévete para tener la luz de frente, de lado y detrás.','Fotografía solo la sombra, sin el objeto.','Busca un reflejo y muévete hasta deformarlo.'],
+  fb:{sum:'La dirección y la calidad de la luz construyen la forma y el ambiente.',purpose:'Que vieras la luz como material de la imagen y no solo como iluminación.',recs:['Vuelve al mismo lugar a otra hora del día y compara.','Fíjate si tu luz era directa o difusa y cómo cambió la sombra.','Prueba poner el sol detrás del objeto para ver su silueta.'],q:'¿Qué pasaría con tu foto si la luz viniera del otro lado?'}},
+ {id:'b5',t:'Intención fotográfica',ill:'subject',
+  sum:'Fotografiar es decidir. Una foto intencional sabe qué quiere que veas primero; una espontánea solo registra lo que había.',
+  concepts:['El protagonista','Qué quiero comunicar','Dirigir la atención','Espontánea o intencional'],
+  obs:{a:'Sin protagonista: la mirada se reparte.',b:'Un protagonista con espacio alrededor. La decisión se nota.',look:['El elemento más importante','Lo que sobra','El espacio alrededor del protagonista']},
+  reto:{name:'Un protagonista',obj:'Hacer una foto con un protagonista claramente identificable.',steps:['Decide qué quieres que se mire primero.','Quita lo que distrae: acércate o cambia el fondo.','Deja espacio para que el protagonista respire.'],tips:['Si alguien ve tu foto un segundo, ¿qué debe ver?','Menos elementos suelen comunicar más.']},
+  exp:['Haz la foto lejos, a media distancia y muy cerca.','Pon al protagonista en el centro y luego a un lado.','Cambia el fondo moviéndote tú, no el objeto.'],
+  fb:{sum:'La intención es decidir antes de disparar qué debe ver la otra persona.',purpose:'Que construyeras una imagen alrededor de un solo protagonista.',recs:['Muéstrale tu foto a alguien un segundo y pregúntale qué vio.','Si dudas entre dos protagonistas, haz dos fotos.','Revisa los bordes del cuadro: ahí suelen esconderse las distracciones.'],q:'¿Tu foto sería distinta si la hubieras tomado sin pensar?'}}
+ ]},
+medio:{n:'02',name:'MEDIO',title:'Construir una imagen',ill:'thirds',
+ desc:'Para mejorar composición, encuadre y manejo visual.',
+ learn:'A organizar los elementos de una foto y decidir encuadre, luz y perspectiva.',
+ skills:['Encuadre','Perspectiva','Luz','Color','Composición'],
+ mods:[
+ {id:'m1',t:'Encuadre y composición',ill:'thirds',shots:3,labels:['Encuadre 1','Encuadre 2','Encuadre 3'],
+  sum:'Encuadrar es decidir qué entra y qué queda fuera. La composición organiza lo que entra.',
+  concepts:['Tipos de encuadre','Regla de los tercios','Simetría y equilibrio','Espacio negativo'],
+  obs:{a:'Sujeto centrado y apretado: estable, pero quieto.',b:'Sujeto en un tercio con espacio negativo: la imagen respira.',look:['Dónde está el sujeto en la retícula','Cuánto espacio vacío hay','Si el peso está equilibrado']},
+  reto:{name:'Tres encuadres',obj:'Fotografiar un mismo objeto con tres encuadres diferentes.',steps:['Elige un objeto cotidiano.','Hazle una foto general, una media y un detalle.','Compara qué cuenta cada encuadre.'],tips:['Activa la retícula de tercios.','Prueba un encuadre con mucho espacio vacío.']},
+  exp:['Una versión simétrica y centrada.','Una versión con el objeto en un tercio.','Una versión donde domine el espacio negativo.'],
+  fb:{sum:'El encuadre decide qué se cuenta; la composición, cómo se lee.',purpose:'Comparar cómo cambia un mismo objeto según el encuadre.',recs:['Elige cuál de los tres encuadres cuenta mejor lo que querías y escribe por qué.','Repite con un sujeto en movimiento.','Trata el espacio vacío como un elemento más.'],q:'¿Cuál encuadre se parece más a cómo ves tú ese objeto?'}},
+ {id:'m2',t:'Perspectiva y profundidad',ill:'planes',shots:3,labels:['Desde abajo','A tu altura','Desde arriba'],
+  sum:'La foto es plana, pero puede sentirse profunda. Los planos y el punto de vista crean esa sensación.',
+  concepts:['Primer plano, plano medio y fondo','Ángulos de visión','Punto de vista','Sensación de profundidad'],
+  obs:{a:'Todo en un solo plano: la imagen se aplana.',b:'Algo cerca, algo en medio y algo lejos: aparece la profundidad.',look:['Qué hay en primer plano','Qué hay al fondo','Desde qué altura se tomó']},
+  reto:{name:'Tres perspectivas',obj:'Fotografiar un espacio desde tres perspectivas y comparar cómo cambia su interpretación.',steps:['Elige un espacio: una calle, una habitación, un parque.','Fotografíalo desde abajo, a tu altura y desde arriba.','Compara qué transmite cada versión.'],tips:['Pon algo cerca del lente para crear un primer plano.','Desde abajo, las cosas se ven más grandes.']},
+  exp:['Agrega un objeto en primer plano.','Busca líneas que se pierdan al fondo.','Haz una versión plana, de frente a una pared.'],
+  fb:{sum:'El punto de vista cambia la interpretación de un mismo espacio.',purpose:'Experimentar cómo la altura y los planos construyen profundidad.',recs:['Ordena tus tres fotos de más a menos profunda.','Repite incluyendo siempre algo en primer plano.','Piensa qué perspectiva usarías para que el espacio se vea enorme o diminuto.'],q:'¿Qué perspectiva cambió más lo que sientes del lugar?'}},
+ {id:'m3',t:'Manejo de la luz',ill:'backlight',shots:3,labels:['Frontal','Lateral','Contraluz'],
+  sum:'La luz natural cambia con la hora; la artificial la decides tú. Su dirección construye la atmósfera.',
+  concepts:['Luz natural y artificial','Luz frontal y lateral','Contraluz','Luz y atmósfera'],
+  obs:{a:'Luz frontal: plana, sin volumen.',b:'Contraluz: el objeto se vuelve silueta y forma.',look:['La dirección de la luz','La dureza de las sombras','La atmósfera que crea']},
+  reto:{name:'Una cosa, tres luces',obj:'Fotografiar un mismo objeto con diferentes direcciones de luz.',steps:['Elige un objeto que puedas mover.','Ponlo con la luz de frente, de lado y detrás.','Fotografía cada versión desde el mismo punto.'],tips:['Una ventana es la mejor fuente de luz en casa.','La linterna de otro celular sirve como luz artificial.']},
+  exp:['Usa luz natural de ventana.','Usa una lámpara o una linterna.','Mezcla una luz cálida y una fría.'],
+  fb:{sum:'La dirección de la luz define volumen, textura y atmósfera.',purpose:'Comparar el efecto de cada dirección de luz sobre un mismo objeto.',recs:['Describe con una palabra la atmósfera de cada foto.','Repite el ejercicio de noche con luz artificial.','Busca luz lateral en la calle a distintas horas.'],q:'¿Qué luz te ayudó más a contar algo del objeto?'}},
+ {id:'m4',t:'Color como herramienta',ill:'twocolor',
+  sum:'El color no solo decora: crea armonía, tensión, temperatura y narrativa.',
+  concepts:['Armonías cromáticas','Colores complementarios','Temperatura del color','Color narrativo'],
+  obs:{a:'Muchos colores sin relación: ruido.',b:'Dos colores en diálogo: la imagen se ordena.',look:['Los dos colores principales','Si son cálidos o fríos','Si se complementan o chocan']},
+  reto:{name:'Dos protagonistas',obj:'Construir una fotografía donde dos colores sean los protagonistas.',steps:['Elige dos colores que veas a tu alrededor.','Busca o arma una escena donde dominen ellos dos.','Saca del cuadro los colores que sobran.'],tips:['Naranja y azul, rojo y verde, amarillo y violeta son complementarios.','Cálido contra frío genera tensión.']},
+  exp:['Prueba dos colores complementarios.','Prueba dos colores parecidos.','Cambia la proporción: uno grande y otro pequeño.'],
+  fb:{sum:'Dos colores bien elegidos pueden ordenar una imagen y darle sentido.',purpose:'Usar el color de forma consciente, como recurso.',recs:['Piensa qué emoción asocias a tu combinación.','Repite con la proporción invertida.','Fíjate en el color en el cine y la publicidad: casi siempre hay pocos.'],q:'¿Tus dos colores cuentan algo juntos?'}},
+ {id:'m5',t:'Composición intencional',ill:'hierarchy',
+  sum:'En una buena composición cada elemento cumple una función. Lo que no suma, distrae.',
+  concepts:['Jerarquía visual','Punto focal','Sujeto y entorno','Elementos distractores'],
+  obs:{a:'Todo del mismo tamaño y peso: no hay orden.',b:'Grande, mediano y pequeño: la mirada sigue un recorrido.',look:['El punto focal','Qué acompaña al sujeto','Qué sobra']},
+  reto:{name:'Nada sobra',obj:'Hacer una foto donde cada elemento tenga una función en la composición.',steps:['Elige un sujeto y su entorno.','Nombra la función de cada cosa en el cuadro.','Saca lo que no tenga función.'],tips:['Revisa las esquinas del cuadro.','Un elemento secundario puede dar contexto o escala.']},
+  exp:['Quita un elemento y compara.','Agrega uno que dé escala.','Cambia el orden de lectura moviéndote.'],
+  fb:{sum:'La jerarquía visual organiza el recorrido de la mirada.',purpose:'Decidir la función de cada elemento antes de disparar.',recs:['Escribe la función de cada elemento de tu foto.','Recorta mentalmente la foto: ¿qué perderías?','Compárala con una foto tomada sin pensar.'],q:'¿Hay algún elemento en tu foto que podrías quitar?'}}
+ ]},
+avanzado:{n:'03',name:'AVANZADO',title:'Comunicar con imágenes',ill:'sequence',
+ desc:'Para experimentar, narrar y desarrollar un lenguaje fotográfico.',
+ learn:'A contar historias, transmitir emociones y construir una mirada propia.',
+ skills:['Narrativa','Emoción','Experimentación','Estilo','Proyecto'],
+ mods:[
+ {id:'a1',t:'Narrativa fotográfica',ill:'sequence',shots:3,labels:['Inicio','Desarrollo','Final'],
+  sum:'Varias fotos juntas cuentan algo que una sola no puede. El orden y la relación entre ellas construyen la historia.',
+  concepts:['Secuencia fotográfica','Relación entre imágenes','Contexto y significado','Narrativa visual'],
+  obs:{a:'Tres fotos sueltas: no hay relación.',b:'Tres momentos de lo mismo: aparece una historia.',look:['Qué cambia de una foto a otra','Qué se mantiene','Dónde empieza y dónde termina']},
+  reto:{name:'Historia en tres',obj:'Crear una secuencia de tres fotos que cuente una pequeña historia sin texto.',steps:['Piensa en algo pequeño que pase: preparar un café, esperar el bus.','Divídelo en inicio, desarrollo y final.','Fotografía cada momento.'],tips:['Mantén algo constante: el lugar, un objeto o la luz.','La historia puede estar en los detalles, no solo en personas.']},
+  exp:['Cambia el orden y mira si la historia cambia.','Haz una versión solo con detalles.','Agrega una foto de contexto.'],
+  fb:{sum:'La narrativa visual nace de la relación entre imágenes.',purpose:'Contar una historia con la secuencia, sin explicarla con palabras.',recs:['Muestra la secuencia a alguien y pídele que te cuente la historia.','Quita una foto: ¿se sigue entendiendo?','Piensa en el ritmo: plano general, detalle, cierre.'],q:'¿Lo que entiende otra persona coincide con lo que querías contar?'}},
+ {id:'a2',t:'Fotografía y emociones',ill:'emotion',
+  sum:'Una imagen puede transmitir una emoción sin mostrar a nadie sintiéndola. La luz, el color, el espacio y los símbolos hacen el trabajo.',
+  concepts:['Imagen y percepción','Luz y color para sentir','Atmósfera visual','Metáforas visuales'],
+  obs:{a:'Una silla entre muchas cosas: solo es una silla.',b:'Una silla sola en un espacio enorme: aparece una sensación.',look:['Qué sensación da el espacio','Qué hace la luz','Qué objeto funciona como símbolo']},
+  reto:{name:'Sin rostros',obj:'Representar una emoción sin mostrar a una persona expresándola.',steps:['Elige una emoción: calma, ansiedad, nostalgia, alegría.','Piensa qué objetos, luz o espacio la sugieren.','Fotografía esa atmósfera.'],tips:['El espacio vacío puede sugerir soledad o calma.','La luz cálida y la luz fría cuentan cosas distintas.']},
+  exp:['Cambia la luz para intensificar la emoción.','Prueba un encuadre muy cerrado y uno muy abierto.','Busca un objeto que funcione como metáfora.'],
+  fb:{sum:'Las emociones se transmiten con atmósfera, no solo con caras.',purpose:'Usar recursos visuales para sugerir una sensación.',recs:['Pregúntale a alguien qué siente con tu foto, sin decirle la emoción.','Repite con la emoción opuesta en el mismo lugar.','Observa cómo el cine usa luz y color para crear ambiente.'],q:'¿Qué cargó más la emoción: la luz, el color o el espacio?'}},
+ {id:'a3',t:'Experimentación visual',ill:'motion',
+  sum:'Romper las reglas también es un recurso. El movimiento, el desenfoque y los reflejos abren otras formas de ver.',
+  concepts:['Movimiento y desenfoque','Exposiciones prolongadas','Reflejos y distorsiones','Perspectivas inusuales'],
+  obs:{a:'Foto nítida y quieta: registra.',b:'Barrido de movimiento: la imagen se siente.',look:['Qué se mueve y qué no','Qué se deforma','Qué queda nítido']},
+  reto:{name:'Rompe la foto',obj:'Crear una fotografía experimental con movimiento, reflejos o desenfoque.',steps:['Elige un recurso: mover el celular, un reflejo o desenfocar.','Haz muchas pruebas; el error es parte del método.','Quédate con la que más te sorprenda.'],tips:['Con poca luz el celular dispara más lento: aprovecha el movimiento.','Pon un vidrio, agua o plástico delante del lente.']},
+  exp:['Mueve el celular mientras disparas.','Fotografía a través de un vidrio o de agua.','Dispara desde un ángulo que nunca usarías.'],
+  fb:{sum:'Experimentar amplía el lenguaje: no todo tiene que ser nítido.',purpose:'Explorar recursos de la cámara sin buscar la foto "correcta".',recs:['Guarda también las pruebas que no funcionaron y mira qué tienen.','Combina dos recursos en una misma foto.','Piensa qué añade el recurso que elegiste al significado.'],q:'¿El efecto suma significado o es solo un efecto?'}},
+ {id:'a4',t:'Lenguaje y estilo',ill:'style',shots:3,labels:['Foto 1','Foto 2','Foto 3'],
+  sum:'El estilo es la coherencia de tus decisiones: la luz, el color, la distancia y los temas que repites.',
+  concepts:['Referencias visuales','Estilos fotográficos','Mirada propia','Coherencia visual'],
+  obs:{a:'Tres fotos de estilos distintos: no se reconoce una mirada.',b:'Tres fotos con una misma intención: se reconoce a quien las hizo.',look:['Qué se repite entre las fotos','La paleta y la luz','La distancia y el encuadre']},
+  reto:{name:'Misma mirada',obj:'Crear tres fotografías que compartan una misma intención estética.',steps:['Define tu intención en una frase.','Ponte 2 reglas propias, por ejemplo: solo sombras y siempre desde abajo.','Haz tres fotos que cumplan tus reglas.'],tips:['Busca fotógrafos que admires y anota qué repiten.','Las restricciones ayudan a encontrar un estilo.']},
+  exp:['Mantén la misma paleta de color.','Mantén la misma distancia al sujeto.','Mantén la misma hora de luz.'],
+  fb:{sum:'El estilo aparece cuando tus decisiones se repiten con intención.',purpose:'Construir coherencia entre varias imágenes.',recs:['Pon las tres fotos juntas y escribe qué las une.','Pide a alguien que adivine tus reglas sin decírselas.','Amplía la serie con dos fotos más.'],q:'¿Tus reglas salen de tus gustos o de algo que quieres decir?'}},
+ {id:'a5',t:'Proyecto fotográfico',ill:'series',shots:5,labels:['01','02','03','04','05'],final:true,
+  sum:'Un proyecto empieza con un concepto, se investiga, se planea, se produce, se selecciona y se presenta.',
+  concepts:['Concepto','Investigación visual','Planeación','Selección y edición'],
+  obs:{a:'Cinco fotos sueltas sin un tema común.',b:'Cinco fotos alrededor de un concepto: una serie.',look:['El concepto que las une','El orden de presentación','La foto que abre y la que cierra']},
+  reto:{name:'Serie de cinco',obj:'Desarrollar una pequeña serie de cinco fotografías alrededor de un concepto o tema personal.',steps:['Escribe tu concepto en una frase.','Planea las cinco fotos antes de salir.','Haz más de cinco y selecciona.','Ordénalas para presentarlas.'],tips:['Un tema cercano a tu vida es más fácil de sostener.','Seleccionar también es decidir.']},
+  exp:['Haz una lista de 10 fotos posibles antes de salir.','Toma el doble de fotos y elige cinco.','Prueba dos órdenes distintos.'],
+  fb:{sum:'Un proyecto une concepto, proceso y presentación.',purpose:'Llevar una idea personal desde el concepto hasta una serie terminada.',recs:['Escribe un título y una frase para presentar la serie.','Pide opinión sobre el orden, no solo sobre cada foto.','Decide qué foto quitarías si solo pudieras mostrar cuatro.'],q:'¿Tu serie dice algo que una sola foto no podría?'}}
+ ]}
+};
+const ORDER=['basico','medio','avanzado'];
+const MOD={};
+ORDER.forEach(k=>LV[k].mods.forEach((m,j)=>{m.lv=k;m.n=String(j+1).padStart(2,'0');m.shots=m.shots||1;m.labels=m.labels||['Tu foto'];
+  if(!m.hints)m.hints=[...m.obs.look.map(x=>x+'.'),...m.reto.tips];MOD[m.id]=m}));
+const STEPS=['Aprender','Observar','Explorar','Experimentar','Fotografiar','Reflexionar','Retroalimentación'];
+const STEP_OF={lesson:0,observe:1,reto:2,explore:2,experiment:3,photo:4,reflect:5,feedback:6};
+const QS=[['a1','¿Qué elemento llamó tu atención?','Descríbelo en pocas palabras…'],
+          ['a2','¿Por qué decidiste fotografiarlo?','Qué te hizo detenerte…'],
+          ['a3','¿Qué querías destacar?','Lo primero que debe ver alguien…'],
+          ['a4','¿Qué cambiarías de tu fotografía?','Si la repitieras mañana…']];
+
+/* ================= IMÁGENES PROVISIONALES (SVG) ================= */
+const K='#171717',O='#EA5536',B='#D7D3C2';
+const bf=a=>`fill="${B}" fill-opacity="${a}"`;
+function frame(x,y,w,h,inner){return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${B}" fill-opacity=".05" stroke="${B}" stroke-opacity=".3"/>${inner}`}
+function ill(t,s=true){
+  const W=300,H=200;let g=`<rect width="${W}" height="${H}" fill="${K}"/>`;
+  switch(t){
+  case 'attention':
+    for(let y=0;y<6;y++)for(let x=0;x<9;x++){const cx=30+x*30,cy=25+y*30;
+      if(x===6&&y===3)g+=`<rect x="${cx-6}" y="${cy-6}" width="12" height="12" ${bf(s?.95:.22)} transform="rotate(20 ${cx} ${cy})"/>`+(s?`<path d="M${cx-18} ${cy-8}v-10h10M${cx+8} ${cy-18}h10v10M${cx+18} ${cy+8}v10h-10M${cx-8} ${cy+18}h-10v-10" stroke="${O}" stroke-width="2" fill="none"/>`:'');
+      else g+=`<circle cx="${cx}" cy="${cy}" r="5" ${bf(.22)}/>`}
+    break;
+  case 'lines':
+    if(s){const vx=205,vy=70;[[-40,200],[30,200],[90,200],[160,200],[260,200],[340,200],[300,160],[300,110],[0,150],[0,40],[0,0],[120,0],[300,0]].forEach(([x,y],i)=>{
+      g+=`<line x1="${x}" y1="${y}" x2="${vx}" y2="${vy}" stroke="${i%4===0?O:B}" stroke-opacity="${i%4===0?1:.3}" stroke-width="${i%4===0?2.4:1.2}"/>`});
+      g+=`<circle cx="${vx}" cy="${vy}" r="5" fill="${O}"/><circle cx="${vx}" cy="${vy}" r="13" fill="none" stroke="${O}"/>`;}
+    else for(let i=0;i<10;i++){const x=-60+i*40;g+=`<line x1="${x}" y1="200" x2="${x+90}" y2="0" stroke="${B}" stroke-opacity=".3" stroke-width="1.2"/>`}
+    break;
+  case 'color':{const ops=[.10,.18,.26,.14,.30,.20,.12,.24,.16,.28,.10,.22];let k=0;
+    for(let y=0;y<3;y++)for(let x=0;x<4;x++){const on=s&&x===2&&y===1;g+=`<rect x="${14+x*70}" y="${12+y*62}" width="62" height="54" rx="2" ${on?`fill="${O}"`:bf(ops[k])}/>`;k++}
+    break;}
+  case 'light':
+    g+=`<rect y="140" width="300" height="60" ${bf(.07)}/>`;
+    if(s)g+=`<defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${O}" stop-opacity=".55"/><stop offset="1" stop-color="${O}" stop-opacity="0"/></linearGradient></defs><polygon points="0,0 80,0 250,200 50,200" fill="url(#lg)"/><polygon points="130,168 180,168 300,194 300,200 225,200" fill="${K}"/><rect x="120" y="90" width="60" height="78" fill="${B}"/><rect x="150" y="90" width="30" height="78" ${bf(.25)}/>`;
+    else g+=`<rect x="120" y="90" width="60" height="78" ${bf(.45)}/>`;
+    break;
+  case 'subject':{const pts=[[30,30],[80,50],[250,40],[270,110],[40,170],[90,190],[240,180],[205,28],[20,100],[130,25],[280,190],[160,180],[60,120],[230,145],[110,150],[150,60],[200,120],[120,95]];
+    pts.forEach(([x,y],i)=>{if(s&&Math.hypot(x-170,y-100)<62)return;g+=i%3?`<circle cx="${x}" cy="${y}" r="${4+i%4}" ${bf(.25)}/>`:`<rect x="${x-5}" y="${y-5}" width="10" height="10" ${bf(.25)}/>`});
+    g+=s?`<circle cx="170" cy="100" r="34" fill="${O}"/>`:`<circle cx="170" cy="100" r="9" ${bf(.25)}/>`;
+    break;}
+  case 'thirds':
+    g+=`<g stroke="${B}" stroke-opacity=".18" stroke-dasharray="3 4"><line x1="100" y1="0" x2="100" y2="200"/><line x1="200" y1="0" x2="200" y2="200"/><line x1="0" y1="66.6" x2="300" y2="66.6"/><line x1="0" y1="133.3" x2="300" y2="133.3"/></g><line x1="0" y1="150" x2="300" y2="150" stroke="${B}" stroke-opacity=".4"/>`;
+    g+=s?`<circle cx="200" cy="67" r="16" fill="${O}"/>`:`<circle cx="150" cy="100" r="62" ${bf(.45)}/>`;
+    break;
+  case 'planes':
+    g+=`<line x1="0" y1="130" x2="300" y2="130" stroke="${B}" stroke-opacity=".25"/>`;
+    if(s)g+=`<rect x="40" y="104" width="14" height="26" ${bf(.15)}/><rect x="70" y="110" width="10" height="20" ${bf(.15)}/><rect x="240" y="100" width="16" height="30" ${bf(.15)}/><rect x="150" y="82" width="38" height="60" fill="${O}"/><polygon points="0,200 0,110 70,100 110,200" ${bf(.6)}/>`;
+    else for(let i=0;i<5;i++)g+=`<rect x="${30+i*52}" y="90" width="30" height="40" ${bf(.35)}/>`;
+    break;
+  case 'backlight':
+    g+=`<rect y="150" width="300" height="50" ${bf(.08)}/>`;
+    if(s)g+=`<circle cx="170" cy="95" r="52" fill="${O}" fill-opacity=".9"/><circle cx="170" cy="86" r="12" fill="${K}"/><rect x="157" y="100" width="26" height="52" rx="6" fill="${K}"/><polygon points="157,152 183,152 120,200 60,200" fill="${K}" fill-opacity=".8"/>`;
+    else g+=`<circle cx="170" cy="86" r="12" ${bf(.5)}/><rect x="157" y="100" width="26" height="52" rx="6" ${bf(.5)}/>`;
+    break;
+  case 'twocolor':
+    if(s)g+=`<rect width="170" height="200" fill="${O}"/><circle cx="205" cy="110" r="52" fill="${B}"/>`;
+    else for(let i=0;i<24;i++){const x=10+(i%6)*48,y=12+Math.floor(i/6)*46;g+=`<rect x="${x}" y="${y}" width="38" height="36" ${i%5===0?`fill="${O}" fill-opacity=".7"`:bf(.1+((i*7)%5)*.07)}/>`}
+    break;
+  case 'hierarchy':
+    if(s)g+=`<circle cx="110" cy="100" r="50" fill="${O}"/><rect x="190" y="70" width="46" height="46" ${bf(.6)}/><circle cx="255" cy="145" r="7" ${bf(.4)}/><circle cx="272" cy="165" r="4" ${bf(.4)}/><circle cx="283" cy="180" r="2.5" ${bf(.4)}/>`;
+    else for(let y=0;y<3;y++)for(let x=0;x<3;x++)g+=`<circle cx="${70+x*80}" cy="${40+y*60}" r="20" ${bf(.35)}/>`;
+    break;
+  case 'sequence':
+    for(let i=0;i<3;i++){const x=12+i*96,y=40;let inner;
+      if(s){const lvl=[44,22,3][i];inner=`<rect x="${x+27}" y="${y+40}" width="30" height="50" fill="none" stroke="${B}" stroke-width="1.5"/><rect x="${x+28}" y="${y+90-lvl}" width="28" height="${lvl}" fill="${O}"/><path d="M${x+57} ${y+52}h8v22h-8" fill="none" stroke="${B}" stroke-width="1.5"/>`}
+      else inner=[`<circle cx="${x+42}" cy="${y+60}" r="20" ${bf(.35)}/>`,`<polygon points="${x+22},${y+85} ${x+42},${y+35} ${x+62},${y+85}" ${bf(.35)}/>`,`<rect x="${x+20}" y="${y+45}" width="44" height="30" ${bf(.35)}/>`][i];
+      g+=frame(x,y,84,120,inner)}
+    break;
+  case 'emotion':
+    g+=`<line x1="0" y1="160" x2="300" y2="160" stroke="${B}" stroke-opacity=".2"/>`;
+    if(s)g+=`<rect x="40" y="30" width="34" height="46" fill="${O}" fill-opacity=".85"/><polygon points="40,160 74,160 200,200 120,200" fill="${O}" fill-opacity=".12"/>`;
+    else [[30,40],[70,120],[110,60],[160,40],[270,60],[150,130],[260,120],[50,150]].forEach(([x,y],i)=>g+=`<rect x="${x}" y="${y}" width="${16+i%3*8}" height="${14+i%2*10}" ${bf(.22)}/>`);
+    g+=`<g stroke="${B}" stroke-width="2" fill="none"><path d="M220 140h22M222 140v20M240 140v20M240 140v-22"/></g>`;
+    break;
+  case 'motion':
+    if(s){g+=`<defs><linearGradient id="mg" x1="0" x2="1"><stop offset="0" stop-color="${O}" stop-opacity="0"/><stop offset=".7" stop-color="${O}"/><stop offset="1" stop-color="${O}" stop-opacity="0"/></linearGradient><linearGradient id="mg2" x1="0" x2="1"><stop offset="0" stop-color="${B}" stop-opacity="0"/><stop offset=".6" stop-color="${B}" stop-opacity=".5"/><stop offset="1" stop-color="${B}" stop-opacity="0"/></linearGradient></defs>`;
+      for(let i=0;i<9;i++)g+=`<rect x="${10+(i*23)%50}" y="${28+i*17}" width="${220+(i*31)%60}" height="${i%3?4:8}" rx="3" fill="url(#${i%3?'mg2':'mg'})"/>`;}
+    else [[60,70],[120,120],[220,80],[250,150],[90,160]].forEach(([x,y])=>g+=`<circle cx="${x}" cy="${y}" r="12" ${bf(.4)}/>`);
+    g+=`<rect x="150" y="18" width="7" height="166" ${bf(.9)}/>`;
+    break;
+  case 'style':
+    for(let i=0;i<3;i++){const x=12+i*96,y=40;let inner;
+      if(s)inner=`<polygon points="${x},${y+120} ${x+84},${y+40} ${x+84},${y+120}" ${bf(.14)}/><circle cx="${x+58}" cy="${y+34}" r="8" fill="${O}"/>`;
+      else inner=[`<circle cx="${x+42}" cy="${y+60}" r="22" fill="${O}"/>`,`<g stroke="${B}" stroke-opacity=".5">${[0,1,2,3,4].map(k=>`<line x1="${x+8}" y1="${y+20+k*20}" x2="${x+76}" y2="${y+20+k*20}"/>`).join('')}</g>`,`<rect x="${x+14}" y="${y+70}" width="56" height="34" ${bf(.4)}/>`][i];
+      g+=frame(x,y,84,120,inner)}
+    break;
+  case 'series':
+    g+=`<rect x="0" y="48" width="300" height="104" ${bf(.04)}/>`;
+    for(let k=0;k<25;k++){g+=`<rect x="${4+k*12}" y="52" width="6" height="5" ${bf(.25)}/><rect x="${4+k*12}" y="143" width="6" height="5" ${bf(.25)}/>`}
+    for(let i=0;i<5;i++){const x=8+i*58,y=62;let inner;
+      if(s)inner=`<line x1="${x}" y1="${y+56}" x2="${x+52}" y2="${y+56}" stroke="${B}" stroke-opacity=".4"/><rect x="${x+20}" y="${y+46-i*8}" width="12" height="10" fill="${O}"/>`;
+      else inner=`<circle cx="${x+10+(i*17)%30}" cy="${y+18+(i*23)%40}" r="${6+i%3*3}" ${i===2?`fill="${O}"`:bf(.4)}/>`;
+      g+=frame(x,y,52,76,inner)}
+    break;
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Imagen de ejemplo provisional">${g}</svg>`;
+}
+
+/* ================= ESTADO ================= */
+const KEY='mad-v2';
+let saved={seen:false,level:null,done:{},opened:{},entries:[],last:null};
+try{const r=localStorage.getItem(KEY);if(r)saved=Object.assign(saved,JSON.parse(r))}catch(e){}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(saved));return true}catch(e){
+  /* si se llena el almacenamiento, quitamos las miniaturas más antiguas */
+  for(let i=0;i<saved.entries.length;i++){if(saved.entries[i].photos.length){saved.entries[i].photos=[];try{localStorage.setItem(KEY,JSON.stringify(saved));return true}catch(_){}}}
+  return false}}
+
+const S={scr:saved.seen?'learn':'welcome',mid:null,cur:null,grid:true,tick:null,loading:false,err:'',toast:'',entry:null,confirm:false};
+const app=document.getElementById('app');
+const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const corners=()=>'<i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>';
+const mod=()=>MOD[S.mid];
+const fresh=()=>({photos:[],active:0,three:['','',''],exp:[],a:{a1:'',a2:'',a3:'',a4:''}});
+const fmtDate=t=>new Date(t).toLocaleDateString('es-CO',{day:'numeric',month:'short'});
+const lvDone=k=>LV[k].mods.filter(m=>saved.done[m.id]).length;
+const attempts=id=>saved.entries.filter(e=>e.mid===id).length;
+const cta=(label,act,dis,extra='')=>`<button class="cta" data-act="${act}" ${extra} ${dis?'disabled':''}><span>${label}</span><span class="arr">→</span></button>`;
+
+function topBar(){
+  const m=mod(),st=STEP_OF[S.scr];
+  return `<header class="top"><button class="ib" data-act="back" aria-label="Volver">←</button>
+   <div class="ticks" role="img" aria-label="Paso ${st+1} de 7: ${STEPS[st]}">${STEPS.map((_,k)=>`<i class="${k<st?'on':k===st?'now':''}"></i>`).join('')}</div>
+   <button class="ib" data-act="close" aria-label="Salir de la lección">×</button></header>
+   <div class="hud"><span>${String(st+1).padStart(2,'0')} · ${STEPS[st]}</span><span>N${LV[m.lv].n} · M${m.n}</span></div>`;
+}
+
+/* ================= PANTALLAS ================= */
+const V={
+welcome(){
+  return `<section class="scr welcome">
+   <div class="hud"><span>Mira antes de disparar</span><span>ISO 400 · f/2.8 · 1/125</span></div>
+   <div class="vf">${corners()}
+     <span class="eyebrow">Escuela de mirada</span>
+     <h1>Mira antes de disparar</h1>
+     <p class="quote">Antes de aprender a tomar fotografías, aprende a mirar.</p>
+   </div>
+   <p class="lead">Retos cortos para hacer con tu celular, donde estés. Aprendes un concepto, sales a buscarlo, fotografías y piensas en lo que decidiste.</p>
+   <div class="flow7">${['Ver','Observar','Identificar','Experimentar','Decidir','Fotografiar','Reflexionar'].map(x=>`<span>${x}</span>`).join('')}</div>
+   ${cta('Comenzar','begin')}
+  </section>`;
+},
+levels(){
+  const first=!saved.level;
+  return `<section class="scr tab">
+   <div class="hud"><span>Niveles</span><span>3 niveles · 15 módulos</span></div>
+   <span class="eyebrow">${first?'Elige cómo empezar':'Cambia de nivel cuando quieras'}</span>
+   <h2>¿Cómo quieres aprender?</h2>
+   <p class="mute">Todos los niveles están abiertos. Puedes empezar por cualquiera y cambiar después.</p>
+   ${ORDER.map(k=>{const L=LV[k];return `<article class="lvcard ${saved.level===k?'sel':''}">
+     <div class="img">${ill(L.ill)}<span class="num">${L.n}</span></div>
+     <div class="body">
+       <span class="eyebrow">${L.name}</span>
+       <h3>${L.title}</h3>
+       <p class="mute">${L.desc}</p>
+       <div><span class="lab">Qué aprenderás</span><p>${L.learn}</p></div>
+       <div class="chips">${L.skills.map(s=>`<span class="chip">${s}</span>`).join('')}</div>
+       ${cta(saved.level===k?'Seguir en este nivel':'Empezar '+L.name.toLowerCase(),'pick',false,`data-lv="${k}"`)}
+     </div></article>`}).join('')}
+   <button class="allbtn" data-act="pick" data-lv="all"><span><span class="d">Explorar todos los niveles</span><br><span class="small">Navega libremente entre los 15 módulos.</span></span><span class="o" style="font-size:22px">→</span></button>
+  </section>`;
+},
+learn(){
+  const view=saved.level||'basico';
+  const keys=view==='all'?ORDER:[view];
+  const total=keys.reduce((a,k)=>a+LV[k].mods.length,0), done=keys.reduce((a,k)=>a+lvDone(k),0);
+  const pct=Math.round(done/total*100);
+  const last=saved.last&&MOD[saved.last.mid];
+  const next=keys.flatMap(k=>LV[k].mods).find(m=>!saved.done[m.id])||keys.flatMap(k=>LV[k].mods)[0];
+  const L=view==='all'?null:LV[view];
+  return `<section class="scr tab">
+   <div class="hud"><span>Aprender</span><span>${done}/${total} módulos</span></div>
+   <div class="seg" role="group" aria-label="Nivel">${[...ORDER,'all'].map(k=>`<button data-act="setlv" data-lv="${k}" aria-pressed="${view===k}">${k==='all'?'TODOS':LV[k].name}</button>`).join('')}</div>
+   <div style="display:flex;flex-direction:column;gap:6px">
+     <span class="eyebrow">${L?'Nivel '+L.n+' · '+L.name:'Todos los niveles'}</span>
+     <h2>${L?L.title:'Explorar todo'}</h2>
+   </div>
+   <div style="display:flex;flex-direction:column;gap:8px">
+     <div class="pct"><span class="d">${pct}<small>%</small></span><span class="small" style="padding-bottom:10px">de ${L?'este nivel':'la experiencia'} completado</span></div>
+     <div class="bar"><i style="width:${pct}%"></i></div>
+   </div>
+   <div class="last">
+     <span class="lab">Última lección realizada</span>
+     ${last?`<span><b>${esc(last.t)}</b> <span class="small">· Nivel ${LV[last.lv].name.toLowerCase()} · ${fmtDate(saved.last.at)}</span></span>`:`<span class="mute">Todavía no has hecho ninguna. Empieza por el módulo ${next.n}.</span>`}
+   </div>
+   ${cta((done?'Continuar: ':'Empezar: ')+next.t,'open',false,`data-m="${next.id}"`)}
+   ${keys.map(k=>`${view==='all'?`<div class="grouph"><span class="eyebrow">Nivel ${LV[k].n} · ${LV[k].name}</span><span class="small">${lvDone(k)}/5</span></div>`:'<span class="lab">Módulos</span>'}
+     <ol class="mods">${LV[k].mods.map(m=>{const dn=saved.done[m.id],n=attempts(m.id);
+       return `<li><button class="mod ${dn?'done':''}" data-act="open" data-m="${m.id}"><span class="n">${m.n}</span>
+         <span><span class="t">${m.t}</span><span class="s">${m.final?'Reto final · ':''}${m.reto.name}${m.shots>1?' · '+m.shots+' fotos':''}</span></span>
+         <span class="st">${dn?(n>1?n+' VECES':'HECHO'):'NUEVO'}</span></button></li>`}).join('')}</ol>`).join('')}
+  </section>`;
+},
+lesson(){
+  const m=mod();
+  return `<section class="scr">${topBar()}
+   <span class="eyebrow">Nivel ${LV[m.lv].n} · Módulo ${m.n}</span>
+   <h2>${m.t}</h2>
+   <p class="lead">${m.sum}</p>
+   <figure class="fig"><div class="vf">${corners()}${ill(m.ill,true)}</div>
+     <figcaption><b>REFERENCIA VISUAL<span>Imagen provisional</span></b>${m.obs.b}</figcaption></figure>
+   <span class="lab">Conceptos importantes</span>
+   <div class="concepts">${m.concepts.map((c,i)=>`<div><b>${String(i+1).padStart(2,'0')}</b>${c}</div>`).join('')}</div>
+   ${cta('Observar ejemplos','go',false,'data-to="observe"')}
+  </section>`;
+},
+observe(){
+  const m=mod();
+  return `<section class="scr">${topBar()}
+   <span class="eyebrow">Observar</span>
+   <h2>Compara y fíjate</h2>
+   <div class="pair">
+     <figure class="fig"><div class="vf">${corners()}${ill(m.ill,false)}</div><figcaption><b>A</b>${m.obs.a}</figcaption></figure>
+     <figure class="fig"><div class="vf">${corners()}${ill(m.ill,true)}</div><figcaption><b>B</b>${m.obs.b}</figcaption></figure>
+   </div>
+   <div style="display:flex;flex-direction:column;gap:10px"><span class="lab">Qué debes identificar</span>
+   <ul class="look">${m.obs.look.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+   <p class="small">Imágenes provisionales: se pueden reemplazar por fotografías reales.</p>
+   ${cta('Ver el reto','go',false,'data-to="reto"')}
+  </section>`;
+},
+reto(){
+  const m=mod();
+  return `<section class="scr">${topBar()}
+   <div class="retocard">
+     <span class="eyebrow">${m.final?'Reto final':'Reto fotográfico'}</span>
+     <h2>${m.reto.name}</h2>
+     <div><span class="lab" style="color:var(--k);opacity:.6">Objetivo</span><p class="obj">${m.reto.obj}</p></div>
+     <div class="chips">${m.timer?`<span class="chip o">⏱ ${m.timer} s de observación</span>`:''}<span class="chip o">${m.shots} ${m.shots>1?'fotos':'foto'}</span></div>
+   </div>
+   <div style="display:flex;flex-direction:column;gap:10px"><span class="lab">Instrucciones</span>
+   <ol class="steps">${m.reto.steps.map(s=>`<li>${s}</li>`).join('')}</ol></div>
+   <div class="tips"><span class="lab o">Consejos</span>${m.reto.tips.map(t=>`<p>${t}</p>`).join('')}</div>
+   ${cta('Comenzar','go',false,'data-to="explore"')}
+  </section>`;
+},
+explore(){
+  const m=mod(),t=m.timer;
+  return `<section class="scr">${topBar()}
+   <div class="hud"><span class="rec">Observando</span><span id="coord">X 000 · Y 000</span></div>
+   <div class="viewer">${corners()}<div class="grid3"></div><div class="fpt" id="fpt" style="left:30%;top:30%"></div>
+     <div class="counter">
+       <div style="position:relative">
+         <svg class="ring" viewBox="0 0 150 150" aria-hidden="true"><circle class="bg" cx="75" cy="75" r="68"/><circle class="fg" id="ringfg" cx="75" cy="75" r="68" stroke-dasharray="427.3" stroke-dashoffset="${t?0:427.3}"/></svg>
+         <div class="bignum" id="num">${t?t:'00:00'}</div>
+       </div>
+       <span class="small" id="sub">${t?'No tomes ninguna foto todavía.':'Camina y busca. Sin prisa.'}</span>
+     </div>
+   </div>
+   <p class="hint" id="hint">${m.hints[0]}</p>
+   ${t?`<div id="after" hidden class="three"><p class="small" style="color:var(--b)">¿Cuáles fueron tus 3 elementos?</p>
+     ${[0,1,2].map(k=>`<label><span>${k+1}</span><input class="field" id="three${k}" data-three="${k}" value="${esc(S.cur.three[k])}" placeholder="${['Algo del suelo…','Algo a tu altura…','Algo arriba…'][k]}"></label>`).join('')}</div>`:''}
+   ${cta(t?'Experimentar':'Lo encontré','go',!!t,'data-to="experiment" id="exploreCta"')}
+   ${t?'<button class="linkbtn" data-act="skiptimer">Saltar el tiempo</button>':''}
+  </section>`;
+},
+experiment(){
+  const m=mod();
+  return `<section class="scr">${topBar()}
+   <span class="eyebrow">Experimentar</span>
+   <h2>Prueba antes de decidir</h2>
+   <p class="mute">Antes de la foto definitiva, prueba estas variaciones con la cámara. Marca las que hiciste; no hay una respuesta correcta.</p>
+   <div class="checks">${m.exp.map((x,i)=>`<label class="check"><input type="checkbox" id="exp${i}" data-exp="${i}" ${S.cur.exp[i]?'checked':''}><span>${x}</span></label>`).join('')}</div>
+   ${cta('Fotografiar','go',false,'data-to="photo"')}
+  </section>`;
+},
+photo(){
+  const m=mod(),c=S.cur,a=c.active,p=c.photos[a],n=m.shots,filled=c.photos.filter(Boolean).length;
+  return `<section class="scr">${topBar()}
+   <span class="eyebrow">Fotografiar</span>
+   <p class="lead" style="font-weight:500">${m.reto.obj}</p>
+   ${n>1?`<div class="slotlab"><span>${esc(m.labels[a])}</span><span>${filled}/${n}</span></div>
+     <div class="slots" style="--n:${n}">${m.labels.map((l,k)=>`<button class="slot ${k===a?'act':''}" data-act="slot" data-k="${k}" aria-label="${esc(l)}">${c.photos[k]?`<img src="${c.photos[k].thumb}" alt="">`:esc(l)}</button>`).join('')}</div>`:''}
+   <div class="shot ${S.grid?'':'nogrid'}">${corners()}<div class="grid3"></div>
+     ${S.loading?`<div class="empty"><div class="spin"></div>PROCESANDO FOTO…</div>`:p?`<img src="${p.full}" alt="Tu fotografía: ${esc(m.labels[a])}">`:`<div class="empty"><div class="cross"></div>AÚN NO HAY FOTO</div>`}
+   </div>
+   <button class="toggle" data-act="grid" aria-pressed="${S.grid}"><span class="sw"></span>RETÍCULA DE TERCIOS</button>
+   ${S.err?`<div class="err" role="alert"><b>No se pudo cargar.</b> ${esc(S.err)}</div>`:''}
+   <div class="row">
+     <label class="filebtn main">${p?'REPETIR FOTO':'ABRIR CÁMARA'}<input type="file" id="cam" accept="image/*" capture="environment" aria-label="Abrir la cámara"></label>
+     <label class="filebtn">GALERÍA<input type="file" id="up" accept="image/*" aria-label="Elegir de la galería"></label>
+   </div>
+   <p class="small">Si tu navegador no abre la cámara, toma la foto con la app de cámara y súbela desde GALERÍA.</p>
+   <button class="linkbtn" data-act="sample">¿Solo quieres probar? Usa una imagen de ejemplo</button>
+   ${cta('Reflexionar','go',filled<n||S.loading,'data-to="reflect"')}
+  </section>`;
+},
+reflect(){
+  const c=S.cur;
+  return `<section class="scr">${topBar()}
+   <span class="eyebrow">Reflexionar</span>
+   <div class="thumbs">${c.photos.map(p=>`<img class="thumb" src="${p.thumb}" alt="Tu fotografía">`).join('')}</div>
+   <p class="mute">Respuestas cortas. Se guardan junto a tus fotos.</p>
+   ${QS.map(([k,q,ph],n)=>`<div class="q"><label for="${k}"><span>0${n+1}</span>${q}</label><textarea class="field" rows="2" id="${k}" data-ans="${k}" placeholder="${ph}">${esc(c.a[k])}</textarea></div>`).join('')}
+   ${cta('Ver retroalimentación','go',false,'data-to="feedback"')}
+  </section>`;
+},
+feedback(){
+  const m=mod(),c=S.cur,f=m.fb,a=c.a;
+  const q=t=>`<q>${esc(t.trim().slice(0,140))}${t.trim().length>140?'…':''}</q>`;
+  const tried=m.exp.filter((_,i)=>c.exp[i]);
+  const three=c.three.filter(t=>t.trim());
+  let you=[];
+  if(three.length)you.push(`<p>Anotaste ${three.length===3?'tus 3 elementos':three.length+' de 3 elementos'}: ${three.map(esc).join(', ')}.</p>`);
+  if(a.a3.trim())you.push(`<p>Querías destacar ${q(a.a3)}. Muéstrale la foto a alguien un segundo y pregúntale qué vio primero: así compruebas si se lee.</p>`);
+  else if(a.a1.trim())you.push(`<p>Te llamó la atención ${q(a.a1)}. La próxima vez, decide también qué quieres que vea la otra persona primero.</p>`);
+  if(a.a4.trim())you.push(`<p>Tú mismo notaste que cambiarías ${q(a.a4)}. Ese es el punto de partida de tu siguiente intento.</p>`);
+  you.push(tried.length?`<p>Probaste ${tried.length} de ${m.exp.length} variaciones antes de decidir.</p>`:`<p>No marcaste variaciones. En el siguiente intento prueba al menos una: ${m.exp[0].toLowerCase()}</p>`);
+  if(!a.a1.trim()&&!a.a2.trim()&&!a.a3.trim()&&!a.a4.trim())you.unshift(`<p class="mute">No escribiste reflexiones. Puedes volver atrás y responder: la retroalimentación se arma con lo que escribas.</p>`);
+  return `<section class="scr">${topBar()}
+   <span class="eyebrow">Retroalimentación</span>
+   <h2>${m.t}</h2>
+   <div class="fb">
+     <section><span class="lab">Lo que trabajaste</span><p>${f.sum}</p></section>
+     <section><span class="lab">Qué buscaba el reto</span><p>${f.purpose}</p></section>
+     <section class="you"><span class="lab">Tus decisiones</span>${you.join('')}</section>
+     <section><span class="lab">Recomendaciones</span><ul>${f.recs.map(r=>`<li>${r}</li>`).join('')}</ul></section>
+     <section><span class="lab">Datos de tu imagen</span>
+       <div class="data">${c.photos.map((p,k)=>`<div class="drow"><img src="${p.thumb}" alt=""><span>${m.shots>1?esc(m.labels[k])+' · ':''}${p.m?`Brillo ${p.m.lum}% · Contraste ${p.m.cont}% · Tono ${p.m.tono}`:'Sin datos'}</span></div>`).join('')}</div>
+       <p class="small">Medición automática de los píxeles. Son datos para comparar tus intentos, no una calificación.</p></section>
+     <section class="ask"><span class="lab">Para seguir pensando</span><p>${f.q}</p></section>
+   </div>
+   <div class="row" style="margin-top:auto">
+     <button class="ghost" data-act="retry" style="flex:.6">Repetir reto</button>
+     <button class="cta" data-act="save" style="margin:0"><span>Guardar</span><span class="arr">→</span></button>
+   </div>
+  </section>`;
+},
+progress(){
+  const E=saved.entries;
+  const explored=ORDER.filter(k=>saved.opened[k]).length;
+  const doneN=Object.keys(saved.done).length;
+  const photos=E.reduce((s,e)=>s+(e.nph||e.photos.length),0);
+  const refl=E.filter(e=>Object.values(e.a||{}).some(v=>v&&v.trim())).length;
+  return `<section class="scr tab">
+   <div class="hud"><span>Progreso</span><span>${E.length} actividades</span></div>
+   <h2>Tu recorrido</h2>
+   <div class="stats">
+     <div class="stat"><span class="lab">Niveles explorados</span><span class="d">${explored}<small>/3</small></span></div>
+     <div class="stat"><span class="lab">Módulos completados</span><span class="d">${doneN}<small>/15</small></span></div>
+     <div class="stat"><span class="lab">Retos realizados</span><span class="d">${E.length}</span></div>
+     <div class="stat"><span class="lab">Fotos guardadas</span><span class="d">${photos}</span></div>
+     <div class="stat wide"><span class="lab">Reflexiones escritas</span><span class="d">${refl}</span></div>
+   </div>
+   <div style="display:flex;flex-direction:column;gap:10px">${ORDER.map(k=>`<div class="lvrow"><span>${LV[k].name}</span><span class="bar"><i style="width:${lvDone(k)/5*100}%"></i></span><span style="text-align:right">${lvDone(k)}/5</span></div>`).join('')}</div>
+   <span class="lab">Tus actividades</span>
+   ${E.length?`<ul class="acts">${E.map((e,i)=>({e,i})).reverse().map(({e,i})=>{const m=MOD[e.mid];return `<li><button class="act" data-act="entry" data-e="${i}">
+     ${e.photos[0]?`<img src="${e.photos[0]}" alt="">`:'<span class="ph"></span>'}
+     <span><span class="t">${m.t}</span><span class="s">Nivel ${LV[m.lv].name.toLowerCase()} · ${fmtDate(e.at)} · ${e.nph||e.photos.length} foto${(e.nph||e.photos.length)===1?'':'s'}</span></span><span class="go">→</span></button></li>`}).join('')}</ul>`
+   :`<div class="emptybox"><div class="cross"></div><p class="mute">Aquí aparecerán tus fotos y reflexiones cuando completes tu primer reto.</p>${cta('Ir a aprender','go',false,'data-to="learn" style="margin:0"')}</div>`}
+  </section>`;
+},
+entry(){
+  const e=saved.entries[S.entry];if(!e)return V.progress();
+  const m=MOD[e.mid];
+  return `<section class="scr tab">
+   <header class="top"><button class="ib" data-act="back" aria-label="Volver">←</button><span class="hud" style="flex:1"><span>Actividad</span><span>${fmtDate(e.at)}</span></span></header>
+   <span class="eyebrow">Nivel ${LV[m.lv].n} · Módulo ${m.n}</span>
+   <h2>${m.t}</h2>
+   ${e.photos.length?`<div class="photos">${e.photos.map(p=>`<img src="${p}" alt="Foto guardada">`).join('')}</div>`:`<p class="small">Las miniaturas de esta actividad se liberaron para ahorrar espacio.</p>`}
+   ${(e.three||[]).some(t=>t.trim())?`<div class="qa"><b>Tus 3 elementos</b><span>${e.three.filter(t=>t.trim()).map(esc).join(' · ')}</span></div>`:''}
+   <div>${QS.map(([k,q])=>`<div class="qa"><b>${q}</b><span class="${e.a[k]?'':'mute'}">${e.a[k]?esc(e.a[k]):'Sin respuesta'}</span></div>`).join('')}</div>
+   <div class="row" style="margin-top:auto">
+     <button class="ghost" data-act="open" data-m="${m.id}">Ver lección</button>
+     <button class="cta" data-act="redo" data-m="${m.id}" style="margin:0"><span>Repetir reto</span><span class="arr">→</span></button>
+   </div>
+  </section>`;
+},
+profile(){
+  const cur=saved.level||'basico';
+  return `<section class="scr tab">
+   <div class="hud"><span>Perfil</span><span>Guardado en este navegador</span></div>
+   <h2>Tu forma de aprender</h2>
+   <span class="lab">Nivel de inicio</span>
+   <div class="opts">${[...ORDER,'all'].map(k=>`<button class="opt" data-act="setlv" data-lv="${k}" aria-pressed="${cur===k}"><span><span class="t">${k==='all'?'Explorar todos los niveles':LV[k].name+' — '+LV[k].title}</span><span class="s">${k==='all'?'Los 15 módulos en una sola lista.':LV[k].desc}</span></span><span class="dot"></span></button>`).join('')}</div>
+   <p class="small">Cambiar de nivel no borra nada. Tu progreso de cada nivel se conserva.</p>
+   <span class="lab">Datos</span>
+   <p class="small">Tus fotos (en tamaño reducido), reflexiones y progreso se guardan solo en este navegador y en este dispositivo.</p>
+   ${S.confirm?`<div class="confirm"><p><b>¿Borrar todo el progreso?</b> Se eliminarán ${saved.entries.length} actividades con sus fotos y reflexiones. No se puede deshacer.</p><div class="row"><button class="ghost" data-act="resetno">Cancelar</button><button class="cta" data-act="resetyes" style="margin:0"><span>Borrar</span><span class="arr">×</span></button></div></div>`
+   :`<button class="ghost" data-act="resetask">Borrar progreso</button>`}
+   <button class="linkbtn" data-act="intro">Ver la presentación otra vez</button>
+  </section>`;
+}
+};
+
+/* ================= NAVEGACIÓN INFERIOR ================= */
+const ICONS={
+ learn:'<path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"/><circle cx="12" cy="12" r="3"/>',
+ levels:'<path d="M4 18h16M6 13h12M8 8h8"/>',
+ progress:'<rect x="3.5" y="5" width="7" height="6"/><rect x="13.5" y="5" width="7" height="6"/><rect x="3.5" y="14" width="7" height="6"/><rect x="13.5" y="14" width="7" height="6"/>',
+ profile:'<circle cx="12" cy="9" r="3.5"/><path d="M5 20c1.2-3.5 4-5 7-5s5.8 1.5 7 5"/>'};
+const TABS=[['learn','APRENDER'],['levels','NIVELES'],['progress','PROGRESO'],['profile','PERFIL']];
+const TAB_OF={learn:'learn',levels:'levels',progress:'progress',entry:'progress',profile:'profile'};
+function nav(){const cur=TAB_OF[S.scr];return `<nav class="nav" aria-label="Navegación principal">${TABS.map(([k,l])=>`<button data-act="go" data-to="${k}" ${cur===k?'aria-current="page"':''}><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>${l}</button>`).join('')}</nav>`}
+
+/* ================= FOTOS ================= */
+const HUES=['rojo','naranja','amarillo','lima','verde','verde','cian','azul','azul','violeta','fucsia','rosa'];
+function measure(img){
+  const w=64,h=Math.max(1,Math.round(64*img.naturalHeight/img.naturalWidth));
+  const cv=document.createElement('canvas');cv.width=w;cv.height=h;const x=cv.getContext('2d');x.drawImage(img,0,0,w,h);
+  const d=x.getImageData(0,0,w,h).data,n=w*h,L=new Float32Array(n),hb=new Array(12).fill(0);let sl=0,sat=0;
+  for(let i=0;i<n;i++){const r=d[i*4]/255,g=d[i*4+1]/255,b=d[i*4+2]/255,l=.2126*r+.7152*g+.0722*b;L[i]=l;sl+=l;
+    const mx=Math.max(r,g,b),mn=Math.min(r,g,b),s=mx?(mx-mn)/mx:0;
+    if(s>.35&&mx>.25){sat++;const dd=mx-mn;let hh=mx===r?((g-b)/dd)%6:mx===g?(b-r)/dd+2:(r-g)/dd+4;hh=(hh*60+360)%360;hb[Math.floor(hh/30)%12]+=s}}
+  const mean=sl/n;let v=0;for(let i=0;i<n;i++)v+=(L[i]-mean)**2;
+  const hm=Math.max(...hb);
+  return{lum:Math.round(mean*100),cont:Math.round(Math.min(1,Math.sqrt(v/n)/.3)*100),tono:sat/n>.08&&hm>0?HUES[hb.indexOf(hm)]:'neutro'};
+}
+function toDataURL(img,max,q){const r=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));const cv=document.createElement('canvas');cv.width=Math.round(img.naturalWidth*r);cv.height=Math.round(img.naturalHeight*r);const x=cv.getContext('2d');x.fillStyle=K;x.fillRect(0,0,cv.width,cv.height);x.drawImage(img,0,0,cv.width,cv.height);return cv.toDataURL('image/jpeg',q)}
+function processSrc(src,revoke){
+  S.loading=true;S.err='';render();
+  const img=new Image();
+  img.onload=()=>{
+    try{const c=S.cur,a=c.active;
+      c.photos[a]={full:toDataURL(img,1000,.82),thumb:toDataURL(img,360,.7),m:measure(img)};
+      const nextEmpty=mod().labels.findIndex((_,k)=>!c.photos[k]);if(nextEmpty>=0)c.active=nextEmpty;
+    }catch(e){S.err='No pudimos procesar esa imagen. Prueba con otra foto.'}
+    S.loading=false;if(revoke)URL.revokeObjectURL(src);render();
+  };
+  img.onerror=()=>{S.loading=false;S.err='El archivo no es una imagen que el navegador pueda abrir. Prueba con una foto JPG o PNG.';if(revoke)URL.revokeObjectURL(src);render()};
+  img.src=src;
+}
+function handleFile(f){
+  if(!f)return;
+  if(f.type&&!f.type.startsWith('image/')){S.err='Ese archivo no es una imagen. Elige una foto.';render();return}
+  processSrc(URL.createObjectURL(f),true);
+}
+function sample(){
+  const m=mod(),strong=S.cur.active%2===0;
+  const svg='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(ill(m.ill,strong).replace('viewBox','width="800" height="533" viewBox'));
+  const img=new Image();
+  img.onload=()=>{try{const cv=document.createElement('canvas');cv.width=800;cv.height=533;cv.getContext('2d').drawImage(img,0,0,800,533);processSrc(cv.toDataURL('image/jpeg',.9))}catch(e){S.err='No se pudo generar la imagen de ejemplo.';render()}};
+  img.onerror=()=>{S.err='No se pudo generar la imagen de ejemplo.';render()};
+  img.src=svg;
+}
+
+/* ================= TEMPORIZADOR ================= */
+function startExplore(){
+  const m=mod(),t=m.timer;let sec=0,h=0;
+  const $=id=>document.getElementById(id);
+  const finish=()=>{clearInterval(S.tick);S.tick=null;$('num').textContent='✓';$('ringfg').style.strokeDashoffset=427.3;
+    $('sub').textContent='Tiempo. Ahora anota y experimenta.';const af=$('after');if(af)af.hidden=false;$('exploreCta').disabled=false;
+    const sk=app.querySelector('[data-act="skiptimer"]');if(sk)sk.hidden=true};
+  S.finishTimer=finish;
+  S.tick=setInterval(()=>{
+    sec++;
+    if(t){const left=Math.max(0,t-sec);$('num').textContent=left;$('ringfg').style.strokeDashoffset=427.3*(1-left/t);if(left===0)finish()}
+    else{$('num').textContent=String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');$('ringfg').style.strokeDashoffset=427.3*(1-(sec%60)/60)}
+    if(sec%5===0){h=(h+1)%m.hints.length;$('hint').textContent=m.hints[h]}
+    if(sec%2===0){$('fpt').style.left=(12+Math.random()*64)+'%';$('fpt').style.top=(12+Math.random()*60)+'%'}
+    $('coord').textContent='X '+String(Math.floor(Math.random()*400)).padStart(3,'0')+' · Y '+String(Math.floor(Math.random()*300)).padStart(3,'0');
+  },1000);
+}
+
+/* ================= RENDER Y EVENTOS ================= */
+const BACK={lesson:'learn',observe:'lesson',reto:'observe',explore:'reto',experiment:'explore',photo:'experiment',reflect:'photo',feedback:'reflect',entry:'progress'};
+function go(s){S.scr=s;S.err='';S.confirm=false;render();app.querySelector('.scr')?.scrollTo(0,0)}
+function openModule(id,start){S.mid=id;S.cur=fresh();saved.opened[MOD[id].lv]=true;persist();go(start||'lesson')}
+function render(){
+  if(S.tick){clearInterval(S.tick);S.tick=null}
+  const tab=!!TAB_OF[S.scr];
+  app.innerHTML=V[S.scr]()+(tab?nav():'')+(S.toast?`<div class="toast" role="status">${esc(S.toast)}</div>`:'');
+  if(S.scr==='explore')startExplore();
+}
+function toast(t){S.toast=t;render();clearTimeout(S.tt);S.tt=setTimeout(()=>{S.toast='';const el=app.querySelector('.toast');if(el)el.remove()},2600)}
+
+app.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b||b.disabled)return;
+  const a=b.dataset.act;
+  switch(a){
+    case 'go':go(b.dataset.to);break;
+    case 'begin':saved.seen=true;persist();go('levels');break;
+    case 'intro':go('welcome');break;
+    case 'pick':saved.level=b.dataset.lv;persist();go('learn');break;
+    case 'setlv':saved.level=b.dataset.lv;persist();render();break;
+    case 'open':openModule(b.dataset.m);break;
+    case 'redo':openModule(b.dataset.m,'reto');break;
+    case 'back':go(BACK[S.scr]||'learn');break;
+    case 'close':go('learn');break;
+    case 'skiptimer':if(S.finishTimer)S.finishTimer();break;
+    case 'grid':S.grid=!S.grid;render();break;
+    case 'slot':S.cur.active=+b.dataset.k;S.err='';render();break;
+    case 'sample':sample();break;
+    case 'retry':{const k=S.cur.three;S.cur=fresh();S.cur.three=k;go('reto');break}
+    case 'save':{
+      const m=mod(),c=S.cur;
+      saved.entries.push({mid:m.id,at:Date.now(),photos:c.photos.map(p=>p.thumb),nph:c.photos.length,a:{...c.a},three:[...c.three],exp:m.exp.map((_,i)=>!!c.exp[i])});
+      saved.done[m.id]=true;saved.opened[m.lv]=true;saved.last={mid:m.id,at:Date.now()};
+      const ok=persist();S.scr='learn';
+      toast(ok?'Actividad guardada en tu progreso.':'Se completó la actividad, pero este navegador no permite guardar.');break}
+    case 'entry':S.entry=+b.dataset.e;go('entry');break;
+    case 'resetask':S.confirm=true;render();break;
+    case 'resetno':S.confirm=false;render();break;
+    case 'resetyes':saved={seen:true,level:saved.level,done:{},opened:{},entries:[],last:null};persist();S.confirm=false;toast('Progreso borrado.');break;
+  }
+});
+app.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.ans)S.cur.a[t.dataset.ans]=t.value;
+  if(t.dataset.three)S.cur.three[+t.dataset.three]=t.value;
+});
+app.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.exp!==undefined)S.cur.exp[+t.dataset.exp]=t.checked;
+  if((t.id==='cam'||t.id==='up')&&t.files&&t.files[0])handleFile(t.files[0]);
+});
+render();
+</script>
+
+</body>
+</html>
