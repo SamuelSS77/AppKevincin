@@ -28,8 +28,20 @@
   --o20:rgba(234,85,54,.25);
   --f-d:"Druk Condensed","Druk Cond","Druk","Arial Narrow",Arial,sans-serif;
   --f-t:"Space Grotesk",Arial,sans-serif;
+  --logo:#171717;          /* logo sobre el fondo */
+  --logo-card:#EA5536;     /* logo sobre la tarjeta invertida */
   color-scheme:light;
 }
+/* Modo oscuro (el original): fondo negro, letras beige */
+:root[data-mode="dark"]{
+  --bg:var(--k); --fg:var(--b);
+  --b70:rgba(215,211,194,.7); --b50:rgba(215,211,194,.5); --b25:rgba(215,211,194,.25);
+  --b12:rgba(215,211,194,.12); --b06:rgba(215,211,194,.06);
+  --o20:rgba(234,85,54,.2);
+  --logo:#EA5536; --logo-card:#171717;
+  color-scheme:dark;
+}
+body,.app,.nav{transition:background-color .25s ease,color .25s ease}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-t);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
 *{box-sizing:border-box}
@@ -41,9 +53,16 @@ button,input,textarea{font:inherit;color:inherit}
 .scr{position:absolute;inset:0;display:flex;flex-direction:column;gap:20px;padding-block:16px 24px;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));overflow-y:auto;overflow-x:hidden;animation:in .3s ease both}
 .scr.tab{bottom:68px}
 .scr>*{flex-shrink:0}
-.logo{display:block;height:auto}
+.logo{display:block;height:auto;color:var(--logo)}
+.logo.oncard{color:var(--logo-card)}
+.brand .right{display:flex;align-items:center;gap:12px}
+.modebtn{width:40px;height:40px;border-radius:50%;border:1px solid var(--b25);background:transparent;display:grid;place-items:center;cursor:pointer;flex-shrink:0;color:var(--fg);padding:0}
+.modebtn:hover{border-color:var(--o);color:var(--o)}
+.modebtn svg{width:20px;height:20px}
+.modebtn[aria-pressed="true"]{background:var(--o);border-color:var(--o);color:var(--ink)}
+.whead{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .brand{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.brand .logo{width:64px}
+.brand .logo{width:46px}
 @keyframes in{from{opacity:.001;transform:translateY(6px)}to{opacity:1;transform:none}}
 
 /* Tipografía */
@@ -101,8 +120,8 @@ p{margin:0}
 /* Bienvenida */
 .welcome h1{font-size:clamp(44px,14.5vw,64px)}
 .welcome .vf{padding:30px 20px;display:flex;flex-direction:column;gap:18px}
-.welcome .logo{width:min(210px,58%)}
-.retocard .logo{width:72px;flex-shrink:0}
+.welcome .logo{width:min(112px,34%)}
+.retocard .logo{width:48px;flex-shrink:0}
 .retocard .rhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .welcome .quote{font-size:20px;line-height:1.25;font-weight:500}
 .flow7{display:flex;flex-wrap:wrap;gap:4px 8px;font-size:10px;letter-spacing:.14em;color:var(--b50);text-transform:uppercase}
@@ -432,7 +451,7 @@ const QS=[['a1','¿Qué elemento llamó tu atención?','Descríbelo en pocas pal
           ['a4','¿Qué cambiarías de tu fotografía?','Si la repitieras mañana…']];
 
 /* ================= IMÁGENES PROVISIONALES (SVG) ================= */
-const K='#D7D3C2',O='#EA5536',B='#171717';
+let K='#D7D3C2',B='#171717';const O='#EA5536';
 const bf=a=>`fill="${B}" fill-opacity="${a}"`;
 function frame(x,y,w,h,inner){return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${B}" fill-opacity=".05" stroke="${B}" stroke-opacity=".3"/>${inner}`}
 function ill(t,s=true){
@@ -472,7 +491,7 @@ function ill(t,s=true){
     break;
   case 'backlight':
     g+=`<rect y="150" width="300" height="50" ${bf(.08)}/>`;
-    if(s)g+=`<circle cx="170" cy="95" r="52" fill="${O}" fill-opacity=".9"/><circle cx="170" cy="86" r="12" fill="${B}"/><rect x="157" y="100" width="26" height="52" rx="6" fill="${B}"/><polygon points="157,152 183,152 120,200 60,200" fill="${B}" fill-opacity=".6"/>`;
+    if(s)g+=`<circle cx="170" cy="95" r="52" fill="${O}" fill-opacity=".9"/><circle cx="170" cy="86" r="12" fill="#171717"/><rect x="157" y="100" width="26" height="52" rx="6" fill="#171717"/><polygon points="157,152 183,152 120,200 60,200" fill="#171717" fill-opacity=".6"/>`;
     else g+=`<circle cx="170" cy="86" r="12" ${bf(.5)}/><rect x="157" y="100" width="26" height="52" rx="6" ${bf(.5)}/>`;
     break;
   case 'twocolor':
@@ -521,12 +540,21 @@ function ill(t,s=true){
 
 /* ================= LOGO UNSEEN (vector, dos versiones) ================= */
 const EYE_D='M6639.74,343.83c-.11.15-.23.3-.35.46-1.78-1.55-3.59-3.06-5.42-4.53-28.57-23.26-61.59-40.68-97.43-50.56-.82-.23-1.64-.46-2.46-.67,1.75,6.83,2.68,13.98,2.68,21.36,0,11.96-2.45,23.35-6.88,33.7.46-1.81.7-3.71.7-5.67,0-12.66-10.25-22.91-22.91-22.91s-22.9,10.25-22.9,22.91,10.25,22.9,22.9,22.9c7.33,0,13.88-3.45,18.06-8.81-14.73,26.11-42.71,43.73-74.82,43.73-47.41,0-85.84-38.43-85.84-85.84,0-3.06.15-6.07.47-9.04-.11.05-.23.09-.33.14-24.31,10.44-46.89,24.46-67.16,41.51-1.84,1.55-3.67,3.12-5.48,4.72,1.8,2.25,3.62,4.47,5.48,6.65,44.35,52.02,110.37,85,184.08,85,5.8,0,11.55-.2,17.25-.61-20.51,5.31-42.01,8.14-64.17,8.14-42.52,0-82.63-10.41-117.9-28.82,1.05-2.51,1.63-5.25,1.63-8.14,0-11.59-9.39-20.98-20.98-20.98-2.5,0-4.88.44-7.11,1.23-2.97-7.09-9.74-12.2-17.76-12.8-.4-2.77-1.34-5.37-2.74-7.7-3.47-5.84-9.71-9.84-16.92-10.21-2.01-9.49-10.44-16.6-20.51-16.6-1.06,0-2.13.08-3.15.24-.75-1-1.48-2.01-2.19-3.01,12.64-11.02,26.2-21.03,40.53-29.9-3-5.67-5.78-11.46-8.29-17.37t-.02-.02c-.12-.27-.24-.56-.35-.84,5.25,5.26,12.52,8.52,20.54,8.52,2.13,0,4.21-.23,6.22-.67l.02-.02c4.78-1.03,9.11-3.26,12.69-6.34,6.19-5.31,10.12-13.21,10.12-22.02,0-2.46-.3-4.85-.88-7.14,4.4,8.79,13.12,15.05,23.37,15.96.85.08,1.73.12,2.62.12,6.85,0,13.15-2.37,18.11-6.34,6.66-5.33,10.92-13.51,10.92-22.7,0-1.35-.09-2.69-.29-4,2.62,7.59,8.28,13.75,15.53,17.01,3.06,1.38,6.39,2.25,9.9,2.48h.02c.65.05,1.32.08,1.99.08,3.09,0,6.06-.49,8.85-1.38h.03c10.42-3.35,18.29-12.41,19.85-23.52,1.99,10.32,9.45,18.68,19.23,21.97h.02c2.91.99,6.01,1.52,9.25,1.52,2.3,0,4.52-.27,6.66-.78h.02c26.79,1.96,52.63,7.32,77.11,15.66h.02c40.55,13.8,77.32,35.75,108.37,63.93Z';
-const logo=(color,cls='')=>`<svg class="logo ${cls}" xmlns="http://www.w3.org/2000/svg" viewBox="6212 228 466 336" role="img" aria-label="UNSEEN"><path d="${EYE_D}" fill="${color}"/><text transform="translate(6241.7512 546.8448) scale(.9187 1)" font-family="'Space Grotesk',Arial,sans-serif" font-weight="700" font-size="111.65" fill="${color}">UNSEEN</text></svg>`;
-const LOGO_NEGRO=()=>logo('#171717'), LOGO_NARANJA=()=>logo('#EA5536');
+const logo=(cls='')=>`<svg class="logo ${cls}" xmlns="http://www.w3.org/2000/svg" viewBox="6212 228 466 336" role="img" aria-label="UNSEEN"><path d="${EYE_D}" fill="currentColor"/><text transform="translate(6241.7512 546.8448) scale(.9187 1)" font-family="'Space Grotesk',Arial,sans-serif" font-weight="700" font-size="111.65" fill="currentColor">UNSEEN</text></svg>`;
+const LOGO=()=>logo(), LOGO_CARD=()=>logo('oncard');
+
+const SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor" fill-opacity=".0"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>';
+const modeBtn=()=>{const light=saved.mode!=='dark';return `<button class="modebtn" data-act="mode" aria-pressed="${light}" aria-label="${light?'Cambiar a modo oscuro':'Cambiar a modo claro'}" title="${light?'Modo claro activo':'Modo oscuro activo'}">${SUN.replace('fill-opacity=".0"',light?'fill-opacity="1"':'fill-opacity="0"')}</button>`};
+function applyMode(){
+  const dark=saved.mode==='dark';
+  document.documentElement.setAttribute('data-mode',dark?'dark':'light');
+  K=dark?'#171717':'#D7D3C2';B=dark?'#D7D3C2':'#171717';
+  const mt=document.querySelector('meta[name="theme-color"]');if(mt)mt.setAttribute('content',dark?'#171717':'#D7D3C2');
+}
 
 /* ================= ESTADO ================= */
 const KEY='mad-v2';
-let saved={seen:false,level:null,done:{},opened:{},entries:[],last:null};
+let saved={seen:false,level:null,done:{},opened:{},entries:[],last:null,mode:'light'};
 try{const r=localStorage.getItem(KEY);if(r)saved=Object.assign(saved,JSON.parse(r))}catch(e){}
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(saved));return true}catch(e){
   /* si se llena el almacenamiento, quitamos las miniaturas más antiguas */
@@ -548,7 +576,7 @@ function topBar(){
   const m=mod(),st=STEP_OF[S.scr];
   return `<header class="top"><button class="ib" data-act="back" aria-label="Volver">←</button>
    <div class="ticks" role="img" aria-label="Paso ${st+1} de 7: ${STEPS[st]}">${STEPS.map((_,k)=>`<i class="${k<st?'on':k===st?'now':''}"></i>`).join('')}</div>
-   <button class="ib" data-act="close" aria-label="Salir de la lección">×</button></header>
+   ${modeBtn()}<button class="ib" data-act="close" aria-label="Salir de la lección">×</button></header>
    <div class="hud"><span>${String(st+1).padStart(2,'0')} · ${STEPS[st]}</span><span>N${LV[m.lv].n} · M${m.n}</span></div>`;
 }
 
@@ -556,9 +584,9 @@ function topBar(){
 const V={
 welcome(){
   return `<section class="scr welcome">
-   <div class="hud"><span>Mira antes de disparar</span><span>ISO 400 · f/2.8 · 1/125</span></div>
+   <div class="whead"><span class="hud"><span>ISO 400 · f/2.8 · 1/125</span></span>${modeBtn()}</div>
    <div class="vf">${corners()}
-     ${LOGO_NEGRO()}
+     ${LOGO()}
      <h1>Mira antes de disparar</h1>
      <p class="quote">Antes de aprender a tomar fotografías, aprende a mirar.</p>
    </div>
@@ -570,7 +598,7 @@ welcome(){
 levels(){
   const first=!saved.level;
   return `<section class="scr tab">
-   <div class="brand">${LOGO_NEGRO()}<span class="hud"><span>3 niveles · 15 módulos</span></span></div>
+   <div class="brand">${LOGO()}<span class="right"><span class="hud"><span>3 niveles · 15 módulos</span></span>${modeBtn()}</span></div>
    <span class="eyebrow">${first?'Elige cómo empezar':'Cambia de nivel cuando quieras'}</span>
    <h2>¿Cómo quieres aprender?</h2>
    <p class="mute">Todos los niveles están abiertos. Puedes empezar por cualquiera y cambiar después.</p>
@@ -596,7 +624,7 @@ learn(){
   const next=keys.flatMap(k=>LV[k].mods).find(m=>!saved.done[m.id])||keys.flatMap(k=>LV[k].mods)[0];
   const L=view==='all'?null:LV[view];
   return `<section class="scr tab">
-   <div class="brand">${LOGO_NEGRO()}<span class="hud"><span>${done}/${total} módulos</span></span></div>
+   <div class="brand">${LOGO()}<span class="right"><span class="hud"><span>${done}/${total} módulos</span></span>${modeBtn()}</span></div>
    <div class="seg" role="group" aria-label="Nivel">${[...ORDER,'all'].map(k=>`<button data-act="setlv" data-lv="${k}" aria-pressed="${view===k}">${k==='all'?'TODOS':LV[k].name}</button>`).join('')}</div>
    <div style="display:flex;flex-direction:column;gap:6px">
      <span class="eyebrow">${L?'Nivel '+L.n+' · '+L.name:'Todos los niveles'}</span>
@@ -650,9 +678,9 @@ reto(){
   const m=mod();
   return `<section class="scr">${topBar()}
    <div class="retocard">
-     <div class="rhead"><span class="eyebrow">${m.final?'Reto final':'Reto fotográfico'}</span>${LOGO_NARANJA()}</div>
+     <div class="rhead"><span class="eyebrow">${m.final?'Reto final':'Reto fotográfico'}</span>${LOGO_CARD()}</div>
      <h2>${m.reto.name}</h2>
-     <div><span class="lab" style="color:var(--b);opacity:.7">Objetivo</span><p class="obj">${m.reto.obj}</p></div>
+     <div><span class="lab" style="color:var(--bg);opacity:.7">Objetivo</span><p class="obj">${m.reto.obj}</p></div>
      <div class="chips">${m.timer?`<span class="chip o">⏱ ${m.timer} s de observación</span>`:''}<span class="chip o">${m.shots} ${m.shots>1?'fotos':'foto'}</span></div>
    </div>
    <div style="display:flex;flex-direction:column;gap:10px"><span class="lab">Instrucciones</span>
@@ -760,7 +788,7 @@ progress(){
   const photos=E.reduce((s,e)=>s+(e.nph||e.photos.length),0);
   const refl=E.filter(e=>Object.values(e.a||{}).some(v=>v&&v.trim())).length;
   return `<section class="scr tab">
-   <div class="brand">${LOGO_NEGRO()}<span class="hud"><span>${E.length} actividades</span></span></div>
+   <div class="brand">${LOGO()}<span class="right"><span class="hud"><span>${E.length} actividades</span></span>${modeBtn()}</span></div>
    <h2>Tu recorrido</h2>
    <div class="stats">
      <div class="stat"><span class="lab">Niveles explorados</span><span class="d">${explored}<small>/3</small></span></div>
@@ -796,7 +824,7 @@ entry(){
 profile(){
   const cur=saved.level||'basico';
   return `<section class="scr tab">
-   <div class="brand">${LOGO_NEGRO()}<span class="hud"><span>Guardado en este navegador</span></span></div>
+   <div class="brand">${LOGO()}<span class="right"><span class="hud"><span>Guardado en este navegador</span></span>${modeBtn()}</span></div>
    <h2>Tu forma de aprender</h2>
    <span class="lab">Nivel de inicio</span>
    <div class="opts">${[...ORDER,'all'].map(k=>`<button class="opt" data-act="setlv" data-lv="${k}" aria-pressed="${cur===k}"><span><span class="t">${k==='all'?'Explorar todos los niveles':LV[k].name+' — '+LV[k].title}</span><span class="s">${k==='all'?'Los 15 módulos en una sola lista.':LV[k].desc}</span></span><span class="dot"></span></button>`).join('')}</div>
@@ -918,7 +946,9 @@ app.addEventListener('click',e=>{
     case 'entry':S.entry=+b.dataset.e;go('entry');break;
     case 'resetask':S.confirm=true;render();break;
     case 'resetno':S.confirm=false;render();break;
-    case 'resetyes':saved={seen:true,level:saved.level,done:{},opened:{},entries:[],last:null};persist();S.confirm=false;toast('Progreso borrado.');break;
+    case 'mode':saved.mode=saved.mode==='dark'?'light':'dark';persist();applyMode();
+      if(S.scr==='explore'){app.querySelectorAll('.modebtn').forEach(x=>x.outerHTML=modeBtn())}else render();break;
+    case 'resetyes':saved={seen:true,level:saved.level,done:{},opened:{},entries:[],last:null,mode:saved.mode};persist();S.confirm=false;toast('Progreso borrado.');break;
   }
 });
 app.addEventListener('input',e=>{
@@ -931,6 +961,7 @@ app.addEventListener('change',e=>{
   if(t.dataset.exp!==undefined)S.cur.exp[+t.dataset.exp]=t.checked;
   if((t.id==='cam'||t.id==='up')&&t.files&&t.files[0])handleFile(t.files[0]);
 });
+applyMode();
 render();
 </script>
 
