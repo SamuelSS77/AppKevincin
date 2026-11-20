@@ -561,7 +561,7 @@ function persist(){try{localStorage.setItem(KEY,JSON.stringify(saved));return tr
   for(let i=0;i<saved.entries.length;i++){if(saved.entries[i].photos.length){saved.entries[i].photos=[];try{localStorage.setItem(KEY,JSON.stringify(saved));return true}catch(_){}}}
   return false}}
 
-const S={scr:saved.seen?'learn':'welcome',mid:null,cur:null,grid:true,tick:null,loading:false,err:'',toast:'',entry:null,confirm:false};
+const S={scr:'welcome',mid:null,cur:null,grid:true,tick:null,loading:false,err:'',toast:'',entry:null,confirm:false};
 const app=document.getElementById('app');
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const corners=()=>'<i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>';
@@ -924,7 +924,7 @@ app.addEventListener('click',e=>{
   const a=b.dataset.act;
   switch(a){
     case 'go':go(b.dataset.to);break;
-    case 'begin':saved.seen=true;persist();go('levels');break;
+    case 'begin':saved.seen=true;persist();go(saved.level?'learn':'levels');break;
     case 'intro':go('welcome');break;
     case 'pick':saved.level=b.dataset.lv;persist();go('learn');break;
     case 'setlv':saved.level=b.dataset.lv;persist();render();break;
